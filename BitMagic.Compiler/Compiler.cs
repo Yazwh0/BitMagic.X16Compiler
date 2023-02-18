@@ -59,11 +59,11 @@ namespace BitMagic.Compiler
                         _project.Machine = newMachine;
                     }
 
-                    if (_project.MachineEmulator != null && !_project.MachineEmulator.Initialised)
-                    {
-                        _project.MachineEmulator.SetRom(new byte[0x4000]);
-                        _project.MachineEmulator.Build();
-                    }
+                    //if (_project.MachineEmulator != null && !_project.MachineEmulator.Initialised)
+                    //{
+                    //    _project.MachineEmulator.SetRom(new byte[0x4000]);
+                    //    _project.MachineEmulator.Build();
+                    //}
 
                     InitFromMachine(state);
 
