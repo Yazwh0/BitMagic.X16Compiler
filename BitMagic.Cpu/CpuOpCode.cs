@@ -13,9 +13,4 @@ namespace BitMagic.Cpu
         public IEnumerable<AccessMode> Modes => OpCodes.Select(i => i.Mode);
         public virtual int OpCodeLength => 1;
     }
-
-    public abstract class EmulatableCpuOpCode : CpuOpCode, IEmulatableCpuOpCode<I6502>
-    {
-        public abstract int Process(byte opCode, Func<(byte value, int timing, ushort pcStep)> GetValueAtPC, Func<(ushort address, int timing, ushort pcStep)> GetAddressAtPc, IMemory memory, I6502 cpu);
-    }
 }

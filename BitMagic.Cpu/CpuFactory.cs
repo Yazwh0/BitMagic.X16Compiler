@@ -23,7 +23,7 @@ namespace BitMagic.Cpu
 
         public static ICpu? GetCpu(Cpu cpu) => cpu switch
         {
-            Cpu.WDC65c02 => new WDC65c02(new MemoryMap(0, 0x10000, new[] { new Ram("Memory", 0x10000) }), 8000000),
+            Cpu.WDC65c02 => new WDC65c02(),
             _ => null
         };
     }

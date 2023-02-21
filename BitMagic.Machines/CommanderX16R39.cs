@@ -11,17 +11,11 @@ namespace BitMagic.Machines
         public string Name => "CommanderX16";
         public int Version => 39;
 
-        ICpu IMachine.Cpu => new WDC65c02(null, 0);
-        private CommanderX16R39Defaults _defaultVariables = new();
+        ICpu IMachine.Cpu => new WDC65c02();
+        private readonly CommanderX16R39Defaults _defaultVariables = new();
         public IVariables Variables => _defaultVariables;
 
         public bool Initialised { get; private set; } = false;
-
-        private byte[]? _rom;
-
-        public CommanderX16R39()
-        {
-        }
     }
 
     internal class CommanderX16R39Defaults : IVariables
