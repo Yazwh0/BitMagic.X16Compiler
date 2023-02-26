@@ -1,37 +1,36 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace BitMagic.Compiler
+namespace BitMagic.Compiler;
+
+internal class ScopeFactory
 {
-    internal class ScopeFactory
+    private readonly Dictionary<string, Scope> _scopes = new Dictionary<string, Scope>();
+    private readonly Variables _global;
+    public ScopeFactory(Variables global)
     {
-        private readonly Dictionary<string, Scope> _scopes = new Dictionary<string, Scope>();
-        private readonly Variables _global;
-        public ScopeFactory(Variables global)
-        {
-            _global = global;
-        }
-
-        public Scope GetScope(string name)
-        {
-            if (!_scopes.ContainsKey(name))
-                _scopes.Add(name, new Scope(name, _global));
-
-            return _scopes[name];
-        }
+        _global = global;
     }
 
-    internal class Scope
+    public Scope GetScope(string name)
     {
-        [JsonProperty]
-        public string Name { get; }
-        [JsonProperty]
-        public Variables Variables { get; }
+        if (!_scopes.ContainsKey(name))
+            _scopes.Add(name, new Scope(name, _global));
 
-        public Scope(string name, Variables globals)
-        {
-            Name = name;
-            Variables = new Variables(globals, name);
-        }
+        return _scopes[name];
+    }
+}
+
+public class Scope
+{
+    [JsonProperty]
+    public string Name { get; }
+    [JsonProperty]
+    public Variables Variables { get; }
+
+    internal Scope(string name, Variables globals)
+    {
+        Name = name;
+        Variables = new Variables(globals, name);
     }
 }

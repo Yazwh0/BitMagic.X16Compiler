@@ -1,6 +1,5 @@
 ﻿using BitMagic.Common;
 using BitMagic.Cpu;
-using BitMagic.Cpu.Memory;
 using System;
 using System.Collections.Generic;
 

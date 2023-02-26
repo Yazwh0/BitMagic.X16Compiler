@@ -268,43 +268,6 @@ namespace BitMagic.Compiler
                 throw new ArgumentNullException(nameof(_project.Code.Contents));
 
 
-            //var sb = new StringBuilder();
-            //// test
-            //var i = 0;
-            //var j = 0;
-            //foreach (var opCode in _project.Machine.Cpu.OpCodes)
-            //{
-            //    foreach (var m in opCode.Modes)
-            //    {
-            //        sb.Append($"'{opCode.GetOpCode(m):X2}\t{opCode.Code}\t");
-            //        sb.AppendLine(m switch
-            //        {
-            //            AccessMode.Implied => "",
-            //            AccessMode.Accumulator => "",     // A
-            //            AccessMode.Immediate => "#$44",       // #$44
-            //            AccessMode.ZeroPage => "$44",        // $44
-            //            AccessMode.ZeroPageX => "$44, X",       // $44, X
-            //            AccessMode.ZeroPageY => "$44, Y",       // $44, Y
-            //            AccessMode.Absolute => "$4433",        // $4400
-            //            AccessMode.AbsoluteX => "$4433, X",       // $4400, X        
-            //            AccessMode.AbsoluteY => "$4433, Y",       // $4400, Y
-            //            AccessMode.Indirect => "($4433)",        // ($4444)
-            //            AccessMode.IndirectX => "($44, X)",       // ($44, X)
-            //            AccessMode.IndirectY => "($44), Y",       // ($44), Y
-            //            AccessMode.IndAbsoluteX => "($4433, X)",    // ($4444, X)
-            //            AccessMode.Relative => $"reldest_{i}",        // #$ff for branch instruction,
-            //            AccessMode.ZeroPageIndirect => "($44)",// ($44)})
-            //            _ => throw new Exception()
-            //        });
-            //        //sb.AppendLine($".byte $00, ${j++:X2} ,$00");
-            //        //if (m == AccessMode.Relative)
-            //        //{
-            //        //    sb.AppendLine($".reldest_{i++}:");
-            //        //}
-            //    }
-            //}
-            //File.WriteAllText(@"d:\documents\source\bitmagic\opcodes.asm", sb.ToString());
-
             var globals = new Variables("App");
 
             var state = new CompileState(globals, _project.OutputFile.Filename ?? "");
@@ -353,7 +316,7 @@ namespace BitMagic.Compiler
 
             var result = await GenerateDataFile(state);
 
-            return new CompileResult(state.Warnings.Select(w => w.ToString()), result, _project);
+            return new CompileResult(state.Warnings.Select(w => w.ToString()), result, _project, state);
         }
         private void InitFromMachine(CompileState state)
         {
