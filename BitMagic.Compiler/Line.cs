@@ -18,7 +18,7 @@ public class Line : IOutputData
     private ICpuOpCode _opCode;
     public bool RequiresReval { get; internal set; }
     public List<string> RequiresRevalNames { get; } = new List<string>();
-    private Procedure _procedure { get; }
+    public Procedure Procedure { get; }
     private string _toParse { get; set; }
     private string _original { get; set; }
     public SourceFilePosition Source { get; }
@@ -32,7 +32,7 @@ public class Line : IOutputData
     {
         _cpu = cpu;
         _expressionEvaluator = expressionEvaluator;
-        _procedure = proc;
+        Procedure = proc;
         _opCode = opCode;
         _toParse = string.Concat(parts).Replace(" ", "");
         _original = _toParse;
@@ -75,7 +75,7 @@ public class Line : IOutputData
         {
             try
             {
-                var compileResult = i.Compile(Params, this, _opCode, _expressionEvaluator, _procedure.Variables, finalParse);
+                var compileResult = i.Compile(Params, this, _opCode, _expressionEvaluator, Procedure.Variables, finalParse);
                 if (compileResult.Data != null)
                 {
                     RequiresReval = compileResult.RequiresRecalc;
