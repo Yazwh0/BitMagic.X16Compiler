@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace BitMagic.Compiler;
 
-internal class ScopeFactory
+public class ScopeFactory
 {
     private readonly Dictionary<string, Scope> _scopes = new Dictionary<string, Scope>();
     private readonly Variables _global;
@@ -19,6 +19,9 @@ internal class ScopeFactory
 
         return _scopes[name];
     }
+
+    public IEnumerable<Scope> AllScopes => _scopes.Values;
+    public Variables GlobalVariables => _global;
 }
 
 public class Scope

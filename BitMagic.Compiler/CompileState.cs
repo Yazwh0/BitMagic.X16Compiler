@@ -24,7 +24,7 @@ public class CompileState
     public List<string> Files { get; set; } = new List<string>();
 
     [JsonProperty]
-    internal ScopeFactory ScopeFactory { get; set; }
+    public ScopeFactory ScopeFactory { get; set; }
     internal IExpressionEvaluator Evaluator { get; set; }
 
     internal readonly Queue<Scope> _scopeQueue = new Queue<Scope>();

@@ -137,7 +137,7 @@ public class Variables : IVariables
         }
     }
 
-    internal IEnumerable<(string Name, int Value)> GetChildVariables(string prepend)
+    public IEnumerable<(string Name, int Value)> GetChildVariables(string prepend)
     {
         foreach(var kv in _variables)
         {
