@@ -17,28 +17,34 @@ public class Decompiler
     /// <param name="bank">Bank number for the data.</param>
     /// <param name="symbols">Symbols lookup. Code will never span a symbol.</param>
     /// <returns></returns>
-    public DecompileReturn Decompile(byte[] data, int baseAddress, int bank, IReadOnlyDictionary<int, string>? symbols)
+    public DecompileReturn Decompile(Span<byte> data, int baseAddress, int maxAddress, int bank, IReadOnlyDictionary<int, string>? symbols, IReadOnlyDictionary<int, string>? additionalSymbols = null)
     {
         var toReturn = new DecompileReturn();
 
         var address = baseAddress & 0xffff;
         var bankAddress = (bank & 0xff) << 16;
         var idx = 0;
-        var lineNumber = 0;
+        var lineNumber = 1;
         symbols ??= new Dictionary<int, string>();
 
-        while (idx < data.Length)
+        while (idx < data.Length && address <= maxAddress)
         {
             var item = new DissasemblyItem();
             item.Address = address;
-            var debuggerAddress = address;
+            var debuggerAddress = address + bankAddress;
+
+            if (address == 50760)
+            {
+                var a = 0;
+            }    
+
             if (symbols.ContainsKey(debuggerAddress))
             {
                 item.Symbol = symbols[debuggerAddress];
                 var symbolLine = new DissasemblyItem()
                 {
                     LineNumber = lineNumber,
-                    Instruction = $".{item.Symbol}:"
+                    Instruction = $"            .{item.Symbol}:"
                 };
                 toReturn.Items.Add(lineNumber, symbolLine);
                 lineNumber++;
@@ -49,6 +55,8 @@ public class Decompiler
                 maxLen = 1;
             else if (symbols.ContainsKey(debuggerAddress + 2))
                 maxLen = 2;
+
+            maxLen = Math.Min(maxLen, maxAddress - address);
 
             var instruction = GetValidInstruction(data, idx, maxLen);
 
@@ -68,12 +76,22 @@ public class Decompiler
                 parameterSymbol = symbols[values.Value];
                 includeComment = true;
             }
+            else if (additionalSymbols != null && additionalSymbols.ContainsKey(values.Value))
+            {
+                parameterSymbol = additionalSymbols[values.Value];
+                includeComment = true;
+            }
             else
                 parameterSymbol = Addressing.GetPrimaryValue(instruction.AddressMode, instruction.Parameter, address);
 
             if (symbols.ContainsKey(values.ValueB))
             {
                 parameterSymbolB = symbols[values.ValueB];
+                includeComment = true;
+            }
+            else if (additionalSymbols != null && additionalSymbols.ContainsKey(values.ValueB))
+            {
+                parameterSymbolB = additionalSymbols[values.ValueB];
                 includeComment = true;
             }
             else
@@ -86,7 +104,7 @@ public class Decompiler
             }
             else
             {
-                item.Instruction = ".byte " + string.Join(", ", instruction.Data.Select(i => i.ToString("X2")));
+                item.Instruction = "            .byte " + string.Join(", ", instruction.Data.Select(i => $"${i:X2}"));
             }
             item.Data = instruction.Data ?? Array.Empty<byte>();
 
@@ -95,13 +113,32 @@ public class Decompiler
             idx += instruction.IndexChange;
             address += instruction.IndexChange;
             lineNumber++;
+
+            switch (item.Data[0])
+            {
+                case 0x4c:
+                case 0x6c:
+                case 0x7c:
+                case 0x40:
+                case 0x60:
+                case 0xdb:
+                    var blankLine = new DissasemblyItem()
+                    {
+                        LineNumber = lineNumber,
+                        Instruction = ""
+                    };
+                    toReturn.Items.Add(lineNumber, blankLine);
+                    lineNumber++;
+                    break;
+            }
+
         }
 
         toReturn.LastAddress = address + bankAddress;
         return toReturn;
     }
 
-    private (bool Valid, string OpCode, AddressMode AddressMode, int Parameter, byte[] Data, int IndexChange) GetValidInstruction(byte[] data, int index, int maxLen)
+    private (bool Valid, string OpCode, AddressMode AddressMode, int Parameter, byte[] Data, int IndexChange) GetValidInstruction(Span<byte> data, int index, int maxLen)
     {
         var opCode = OpCodes.GetOpcode(data[index]);
         maxLen = Math.Min(maxLen, data.Length - index);
@@ -116,7 +153,7 @@ public class Decompiler
             1 => new byte[] { data[index] },
             2 => new byte[] { data[index], data[index + 1] },
             3 => new byte[] { data[index], data[index + 1], data[index + 2] },
-            _ => Array.Empty<byte>(),
+            _ => new byte[] { data[index] },
         };
 
         if (index + instructionLength > data.Length)
@@ -146,24 +183,31 @@ public class Decompiler
 
         if (addressMode == AddressMode.Implied || addressMode == AddressMode.Accumulator || addressMode == AddressMode.Immediate || string.IsNullOrWhiteSpace(symbol))
         {
-            return $"{opCode} {Addressing.GetModeText(addressMode, parameter, address)}";
+            return $"/* ${address:X4} */ {opCode} {Addressing.GetModeText(addressMode, parameter, address)}";
         }
 
-        var baseString = $"{opCode} {Addressing.GetModeSymbol(addressMode, symbol, symbolB)}";
+        var baseString = $"/* ${address:X4} */ {opCode} {Addressing.GetModeSymbol(addressMode, symbol, symbolB)}";
 
         return (includeComment ?
-            baseString.PadRight(45) + " ; " + Addressing.GetModeText(addressMode, parameter, address) : baseString);
+            baseString.PadRight(55) + " ; " + Addressing.GetModeText(addressMode, parameter, address) : baseString);
     }
 }
 
 public class DecompileReturn
 {
+    public string Name { get; set; } = "";
+    public string Path { get; set; } = "";
+    public int ReferenceId { get; set; }
+    public string Origin { get; set; } = "";
+
+
     public int LastAddress { get; set; }
     public Dictionary<int, DissasemblyItem> Items { get; set; } = new();
 }
 
 public class DissasemblyItem
 {
+    public bool HasInstruction => Data.Length != 0;
     public int Address { get; set; }
     public string Symbol { get; set; } = "";
     public string Instruction { get; set; } = "";

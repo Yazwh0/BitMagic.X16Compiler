@@ -40,7 +40,7 @@ public static class Addressing
         AddressMode.ZeroPageIndirect => $"(${value & 0xff:X2})",
         AddressMode.XIndexZeroPageIndirect => $"(${value & 0xff:X2}, x)",
         AddressMode.ZeroPageIndirectYIndexed => $"(${value & 0xff:X2}), y",
-        AddressMode.Relative => $"${value & 0xff:X2}",
+        AddressMode.Relative => $"${(sbyte)(value & 0xff) + currentAddress + 2:X4}",
         AddressMode.ZeroPageRelative => $"${value & 0xff:X2}, ${(sbyte)((value & 0xff00) >> 8) + currentAddress + 3:X4}",
         _ => "??"
     };
@@ -61,7 +61,7 @@ public static class Addressing
         AddressMode.ZeroPageIndirect => $"${value & 0xff:X2}",
         AddressMode.XIndexZeroPageIndirect => $"${value & 0xff:X2}",
         AddressMode.ZeroPageIndirectYIndexed => $"${value & 0xff:X2}",
-        AddressMode.Relative => $"${(sbyte)(value & 0xff) + currentAddress + 1:X2}",
+        AddressMode.Relative => $"${(sbyte)(value & 0xff) + currentAddress + 2:X4}",
         AddressMode.ZeroPageRelative => $"${value & 0xff:X2}",
         _ => "??"
     };
@@ -109,7 +109,7 @@ public static class Addressing
         AddressMode.ZeroPageIndirect => (value, 0),
         AddressMode.XIndexZeroPageIndirect => (value, 0),
         AddressMode.ZeroPageIndirectYIndexed => (value, 0),
-        AddressMode.Relative => ((sbyte)(value & 0xff) + currentAddress + 1, 0),
+        AddressMode.Relative => ((sbyte)(value & 0xff) + currentAddress + 2, 0),
         AddressMode.ZeroPageRelative => (value & 0xff, ((value & 0xff00) >> 8) + currentAddress + 3),
         _ => (-1, -1)
     };
