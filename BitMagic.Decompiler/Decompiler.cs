@@ -36,8 +36,9 @@ public class Decompiler
             if (address == 50760)
             {
                 var a = 0;
-            }    
+            }
 
+            // todo: use additional symbols
             if (symbols.ContainsKey(debuggerAddress))
             {
                 item.Symbol = symbols[debuggerAddress];
@@ -199,7 +200,8 @@ public class DecompileReturn
     public string Path { get; set; } = "";
     public int ReferenceId { get; set; }
     public string Origin { get; set; } = "";
-
+    public bool Volatile { get; set; } = false;
+    public Action Generate { get; set; } = () => { };
 
     public int LastAddress { get; set; }
     public Dictionary<int, DissasemblyItem> Items { get; set; } = new();
