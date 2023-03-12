@@ -33,11 +33,6 @@ public class Decompiler
             item.Address = address;
             var debuggerAddress = address + bankAddress;
 
-            if (address == 50760)
-            {
-                var a = 0;
-            }
-
             // todo: use additional symbols
             if (symbols.ContainsKey(debuggerAddress))
             {
