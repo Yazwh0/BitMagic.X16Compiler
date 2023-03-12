@@ -202,6 +202,8 @@ public class DecompileReturn
     public string Origin { get; set; } = "";
     public bool Volatile { get; set; } = false;
     public Action Generate { get; set; } = () => { };
+    public int RamBank { get; set; }
+    public int RomBank { get; set; }
 
     public int LastAddress { get; set; }
     public Dictionary<int, DissasemblyItem> Items { get; set; } = new();
