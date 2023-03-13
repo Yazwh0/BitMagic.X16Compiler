@@ -33,10 +33,13 @@ public class Decompiler
             item.Address = address;
             var debuggerAddress = address + bankAddress;
 
-            // todo: use additional symbols
-            if (symbols.ContainsKey(debuggerAddress))
+            string parameterSymbol = symbols.ContainsKey(debuggerAddress) ? symbols[debuggerAddress] : (
+                (additionalSymbols != null && additionalSymbols.ContainsKey(debuggerAddress)) ? additionalSymbols[debuggerAddress] : ""
+                );
+
+            if (!string.IsNullOrWhiteSpace(parameterSymbol))
             {
-                item.Symbol = symbols[debuggerAddress];
+                item.Symbol = parameterSymbol;
                 var symbolLine = new DissasemblyItem()
                 {
                     LineNumber = lineNumber,
@@ -64,7 +67,6 @@ public class Decompiler
             if (values.ValueB >= 0xc000)
                 values.ValueB += bankAddress;
 
-            string parameterSymbol;
             string parameterSymbolB;
             bool includeComment = false;
             if (symbols.ContainsKey(values.Value))
