@@ -2260,7 +2260,11 @@ namespace CodingSeb.ExpressionEvaluator
                                     if (!OptionInstancePropertiesGetActive && (flag & BindingFlags.Instance) != 0)
                                         throw new ExpressionEvaluatorSyntaxErrorException($"[{objType}] object has no public Property or Field named \"{varFuncName}\".");
 
-                                    bool isDynamic = (flag & BindingFlags.Instance) != 0 && obj is IDynamicMetaObjectProvider && obj is IDictionary<string, object>;
+                                    var a = (flag & BindingFlags.Instance) != 0;
+                                    var b = obj is IDictionary<string, object>;
+                                    // used to include "&& obj is IDynamicMetaObjectProvider"
+                                    bool isDynamic = (flag & BindingFlags.Instance) != 0 && (
+                                        obj is IDictionary<string, object>);
                                     IDictionary<string, object> dictionaryObject = obj as IDictionary<string, object>;
 
                                     MemberInfo member = isDynamic ? null : objType?.GetProperty(varFuncName, flag);
@@ -2289,7 +2293,34 @@ namespace CodingSeb.ExpressionEvaluator
                                     if (isDynamic)
                                     {
                                         if (!varFuncMatch.Groups["assignationOperator"].Success || varFuncMatch.Groups["assignmentPrefix"].Success)
-                                            varValue = dictionaryObject.ContainsKey(varFuncName) ? dictionaryObject[varFuncName] : null;
+                                        {
+                                            var thisObj = dictionaryObject.ContainsKey(varFuncName) ? dictionaryObject[varFuncName] : null;
+
+                                            if (thisObj is Func<object> func_o)
+                                                thisObj = func_o();
+                                            else if (thisObj is Func<int> func_int)
+                                                thisObj = func_int();
+                                            else if (thisObj is Func<bool> func_bool)
+                                                thisObj = func_bool();
+                                            else if (thisObj is Func<string> func_string)
+                                                thisObj = func_string();
+                                            else if (thisObj is Func<double> func_double)
+                                                thisObj = func_double();
+                                            else if (thisObj is Func<decimal> func_decimal)
+                                                thisObj = func_decimal();
+                                            else if (thisObj is Func<byte> func_byte)
+                                                thisObj = func_byte();
+                                            else if (thisObj is Func<sbyte> func_sbyte)
+                                                thisObj = func_sbyte();
+                                            else if (thisObj is Func<short> func_short)
+                                                thisObj = func_short();
+                                            else if (thisObj is Func<ushort> func_ushort)
+                                                thisObj = func_ushort();
+                                            else if (thisObj is Func<uint> func_uint)
+                                                thisObj = func_uint();
+
+                                            varValue = thisObj;
+                                        }
                                         else
                                             pushVarValue = false;
                                     }
