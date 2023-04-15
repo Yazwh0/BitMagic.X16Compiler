@@ -1,4 +1,5 @@
 ﻿using BitMagic.Common;
+using BitMagic.Compiler.CodingSeb;
 using BitMagic.Compiler.Exceptions;
 using CodingSeb.ExpressionEvaluator;
 using System;
@@ -12,7 +13,7 @@ namespace BitMagic.Compiler;
 
 public class Line : IOutputData
 {
-    public readonly static CodingSeb.ExpressionEvaluator.ExpressionEvaluator _evaluator = new();
+    public readonly static Asm6502ExpressionEvaluator _evaluator = new();
 
     public byte[] Data { get; internal set; } = new byte[] { };
     private ICpuOpCode _opCode;

@@ -1,4 +1,5 @@
 ﻿using BitMagic.Common;
+using BitMagic.Compiler.CodingSeb;
 using CodingSeb.ExpressionEvaluator;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ namespace BitMagic.Compiler
 {
     internal class ExpressionEvaluator : IExpressionEvaluator
     {
-        private readonly CodingSeb.ExpressionEvaluator.ExpressionEvaluator _evaluator = new();
+        private readonly Asm6502ExpressionEvaluator _evaluator = new();
         private bool _requiresReval;
         private ParameterSize _size;
         private IVariables? _variables = null;
