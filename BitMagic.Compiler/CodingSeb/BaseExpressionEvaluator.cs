@@ -198,7 +198,7 @@ namespace CodingSeb.ExpressionEvaluator
             { "-", ExpressionOperator.Minus },
             { "*", ExpressionOperator.Multiply },
             { "/", ExpressionOperator.Divide },
-            { "%", ExpressionOperator.Modulo },
+            { "%%", ExpressionOperator.Modulo },
             { "<", ExpressionOperator.Lower },
             { ">", ExpressionOperator.Greater },
             { "<=", ExpressionOperator.LowerOrEqual },
