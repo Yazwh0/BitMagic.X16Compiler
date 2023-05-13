@@ -25,19 +25,19 @@ namespace BitMagic.Compiler
             return new CommandParser();
         }
 
-        public CommandParser WithParameters(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames = null)
+        public CommandParser WithParameters(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames = null, char seperator = ',')
         {
-            _lineProcessor.Add(verb, (p, s, r) => ProcesParameters(r ,p, s, action, defaultNames));
+            _lineProcessor.Add(verb, (p, s, r) => ProcesParameters(r ,p, s, action, defaultNames, seperator));
             return this;
         }
 
-        public CommandParser WithLine(string verb, Action<SourceFilePosition, CompileState> action) 
+        public CommandParser WithLine(string verb, Action<SourceFilePosition, CompileState> action)
         {
             _lineProcessor.Add(verb, (p, s, r) => ProcessLine(p, s, action));
             return this;
         }
 
-        public CommandParser WithLabel(Action<string, CompileState> action) 
+        public CommandParser WithLabel(Action<string, CompileState> action)
         {
             _labelProcessor = action;
             return this;
@@ -75,7 +75,7 @@ namespace BitMagic.Compiler
             map(source, state, toProcess);
         }
 
-        private static void ProcesParameters(string rawParams, SourceFilePosition source, CompileState state, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames)
+        private static void ProcesParameters(string rawParams, SourceFilePosition source, CompileState state, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames, char seperator)
         {
             var parameters = new Dictionary<string, string>();
 
@@ -87,7 +87,12 @@ namespace BitMagic.Compiler
 
             var defaultPos = 0;
 
-            var thisArgs = rawParams.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            var thisArgs = 
+                rawParams.Split('"')
+                         .Select((element, index) => index % 2 == 0  // If even index
+                                           ? element.Split(seperator, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)  // Split the item
+                                           : new string[] { element })  // Keep the entire item
+                         .SelectMany(element => element).ToArray();
 
             for (var argsPos = 0; argsPos < thisArgs.Length; argsPos++)
             {
@@ -117,16 +122,5 @@ namespace BitMagic.Compiler
         private static void ProcessLine(SourceFilePosition source, CompileState state, Action<SourceFilePosition, CompileState> action) => action(source, state);
 
         private static void ProcessLabel(SourceFilePosition source, CompileState state, Action<SourceFilePosition, CompileState> action) => action(source, state);
-
-
-/*        private static void Parse(string args,
-            IList<(string verb, Action<IDictionary<string, string>> processor, IList<string> defaultParameters, bool hasParameters)> maps,
-            Action<string> label)
-        {
-            
-        }*/
     }
-
-
-
 }

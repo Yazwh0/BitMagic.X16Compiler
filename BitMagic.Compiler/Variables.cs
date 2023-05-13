@@ -3,7 +3,9 @@ using BitMagic.Compiler.Exceptions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text.RegularExpressions;
 
 namespace BitMagic.Compiler;
@@ -23,19 +25,19 @@ public class VariableException : CompilerException
 public class Variables : IVariables
 {
     [JsonProperty]
-    private readonly Dictionary<string, int> _variables = new Dictionary<string, int>();
+    private readonly Dictionary<string, IAsmVariable> _variables = new Dictionary<string, IAsmVariable>();
 
     private readonly Variables? _parent;
     private readonly List<Variables> _children = new List<Variables>();
-    
+
     public string Namespace { get; }
 
     [JsonIgnore]
-    public IReadOnlyDictionary<string, int> Values => _variables;
+    public IReadOnlyDictionary<string, IAsmVariable> Values => _variables;
 
     public Variables(IVariables defaultValues, string @namespace)
     {
-        foreach(var kv in defaultValues.Values)
+        foreach (var kv in defaultValues.Values)
         {
             _variables.Add(kv.Key, kv.Value);
         }
@@ -65,7 +67,7 @@ public class Variables : IVariables
     {
         if (_variables.ContainsKey(name))
         {
-            result = _variables[name];
+            result = _variables[name].Value;
             return true;
         }
 
@@ -91,7 +93,7 @@ public class Variables : IVariables
 
         var prev = name;
         var regexname = name;
-        while(true)
+        while (true)
         {
             regexname = prev.Replace("::", ":.*:");
             if (regexname == prev)
@@ -103,7 +105,7 @@ public class Variables : IVariables
         var regex = new Regex($"^{(name.StartsWith(':') ? ".*" : "")}{regexname}$", RegexOptions.Compiled | RegexOptions.Singleline);
 
         // use pattern matching
-        foreach(var kv in GetChildVariables(Namespace))
+        foreach (var kv in GetChildVariables(Namespace))
         {
             if (kv.Name == name)
             {
@@ -139,27 +141,27 @@ public class Variables : IVariables
 
     public IEnumerable<(string Name, int Value)> GetChildVariables(string prepend)
     {
-        foreach(var kv in _variables)
+        foreach (var kv in _variables)
         {
-            yield return ($"{prepend}:{kv.Key}", kv.Value);
+            yield return ($"{prepend}:{kv.Key}", kv.Value.Value);
         }
 
-        foreach(var child in _children.Where(i => i != null))
+        foreach (var child in _children.Where(i => i != null))
         {
-            foreach(var v in child.GetChildVariables(child.Namespace))
+            foreach (var v in child.GetChildVariables(child.Namespace))
             {
                 yield return ($"{prepend}:{v.Name}", v.Value);
             }
         }
     }
 
-    public void SetValue(string name, int value)
+    public void SetValue(string name, int value, VariableType variableType, int length = 0, bool array = false)
     {
         if (_variables.ContainsKey("name"))
             throw new Exception($"Variable already defined {name}");
 
-        _variables[name] = value;
+        _variables[name] = new AsmVariable { Name = name, Value = value, VariableType = variableType, Length = length, Array = array };
     }
 
-    public bool HasValue(string name) =>_variables.ContainsKey(name);
+    public bool HasValue(string name) => _variables.ContainsKey(name);
 }

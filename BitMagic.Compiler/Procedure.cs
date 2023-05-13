@@ -67,7 +67,7 @@ public class Procedure
         {
             var proc = new Procedure(name, this);
             _procedures.Add(name, proc);
-            Variables.SetValue(name, address);
+            Variables.SetValue(name, address, VariableType.ProcStart);
         }
 
         return _procedures[name];
@@ -79,7 +79,7 @@ public class Procedure
         {
             var proc = new Procedure(scope, name, true, this);
             _procedures.Add(name, proc);
-            Variables.SetValue(name, address);
+            Variables.SetValue(name, address, VariableType.ProcStart);
         }
 
         return _procedures[name];

@@ -97,21 +97,6 @@ public class Line : IOutputData
         throw new CannotCompileException(this, $"Cannot compile line '{_original}'");
     }
 
-    //private void _evaluator_PreEvaluateVariable(object? sender, VariablePreEvaluationEventArg e)
-    //{
-    //    if (_procedure.Variables.TryGetValue(e.Name, 0, out var result))
-    //    {
-    //        e.Value = result;
-    //        RequiresReval = false;
-    //    }
-    //    else
-    //    {
-    //        RequiresRevalNames.Add(e.Name);
-    //        RequiresReval = true;
-    //        e.Value = 0xabcd; // random two byte number
-    //    }
-    //}
-
     public void WriteToConsole()
     {
         Console.Write($"${Address:X4}:{(RequiresReval ? "* " : "  ")}{string.Join(", ", Data.Select(a => $"${a:X2}")),-22}");

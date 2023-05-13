@@ -2,6 +2,7 @@
 using BitMagic.Cpu;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BitMagic.Machines
 {
@@ -19,7 +20,7 @@ namespace BitMagic.Machines
 
     internal class CommanderX16R38Defaults : IVariables
     {
-        private static Dictionary<string, int> _defaults = new Dictionary<string, int>
+        private static Dictionary<string, IAsmVariable> _defaults = new Dictionary<string, int>
         {
             {"ADDRx_L", 0x9F20 },
             {"ADDRx_M", 0x9F21},
@@ -81,9 +82,9 @@ namespace BitMagic.Machines
             {"V_IFR", 0x9f0d },
             {"V_IER", 0x9f0e },
             {"V_ORA", 0x9f0f }
-        };
+        }.ToDictionary(i => i.Key, i => (IAsmVariable)(new AsmVariable { Name = i.Key, Value = i.Value, VariableType = VariableType.Ushort }));
 
-        public IReadOnlyDictionary<string, int> Values => _defaults;
+        public IReadOnlyDictionary<string, IAsmVariable> Values => _defaults;
 
         // todo: create abstract class or similar.
         public bool TryGetValue(string name, int lineNumber, out int result) => throw new Exception();

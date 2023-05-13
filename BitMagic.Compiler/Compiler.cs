@@ -10,14 +10,18 @@ using System.Text;
 using System.Threading.Tasks;
 using BitMagic.Compiler.Exceptions;
 using BitMagic.Compiler.Warnings;
+using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
 
 namespace BitMagic.Compiler
 {
     public class Compiler
     {
-        private readonly Project _project;        
+        private readonly Project _project;
         private readonly Dictionary<string, ICpuOpCode> _opCodes = new Dictionary<string, ICpuOpCode>();
         private readonly CommandParser _commandParser;
+
+        private static Regex _variableType = new Regex("(?<typename>(?i:byte|sbyte|short|ushort|int|uint|long|ulong|string))(\\[(?<size>\\d+)\\])?", RegexOptions.Compiled);
 
         public Compiler(Project project)
         {
@@ -38,7 +42,7 @@ namespace BitMagic.Compiler
                     if (label == ".:")
                         throw new Exception("Labels require a name. .: is not valid.");
 
-                    state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address);
+                    state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableType.Pointer);
                 })
                 //.WithParameters(".scopedelimiter",  (dict, state, source) =>
                 //{
@@ -83,7 +87,8 @@ namespace BitMagic.Compiler
                     InitFromMachine(state);
 
                 }, new[] { "name" })
-                .WithParameters(".segment", (dict, state, source) => {
+                .WithParameters(".segment", (dict, state, source) =>
+                {
                     Segment segment;
 
                     if (state.Segments.ContainsKey(dict["name"]))
@@ -126,7 +131,7 @@ namespace BitMagic.Compiler
                             filename = filename[1..^1];
 
                         segment.Filename = filename;
-                    } 
+                    }
                     else
                     {
                         segment.Filename = ":" + segment.Name; // todo: find a better way to inform the writer that this segment isn't to be written.
@@ -136,13 +141,15 @@ namespace BitMagic.Compiler
                     state.Scope = state.ScopeFactory.GetScope($"Main");
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
 
-                }, new[] { "name", "address", "filename", "maxsize" })
-                .WithParameters(".endsegment", (dict, state, source) => {
+                }, new[] { "name", "address", "filename", "maxsize" }, ' ')
+                .WithParameters(".endsegment", (dict, state, source) =>
+                {
                     state.Segment = state.Segments["Main"];
                     state.Scope = state.ScopeFactory.GetScope($"Main");
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
                 })
-                .WithParameters(".scope", (dict, state, source) => {
+                .WithParameters(".scope", (dict, state, source) =>
+                {
 
                     string name = dict.ContainsKey("name") ? dict["name"] : $"Scope_{state.AnonCounter}";
                     state.Scope = state.ScopeFactory.GetScope(name);
@@ -151,7 +158,8 @@ namespace BitMagic.Compiler
                     state.AnonCounter++;
 
                 }, new[] { "name" })
-                .WithParameters(".endscope", (dict, state, source) => {
+                .WithParameters(".endscope", (dict, state, source) =>
+                {
 
                     if (state.Procedure.Name.Replace("_Proc", "") != state.Scope.Name || !state.Procedure.Anonymous)
                     {
@@ -164,22 +172,24 @@ namespace BitMagic.Compiler
                         proc = state.Segment.GetDefaultProcedure(state.Scope);
                         state.Warnings.Add(new UnmatchedEndProcWarning(source));
                     }
-                    
-                    state.Scope = proc.Scope;                    
+
+                    state.Scope = proc.Scope;
                     state.Procedure = proc;
 
                 })
-                .WithParameters(".proc", (dict, state, source) => {
+                .WithParameters(".proc", (dict, state, source) =>
+                {
 
                     var name = dict.ContainsKey("name") ? dict["name"] : $"UnnamedProc_{state.AnonCounter++}";
 
                     state.Procedure = state.Procedure.GetProcedure(name, state.Segment.Address);
 
                 }, new[] { "name" })
-                .WithParameters(".endproc", (dict, state, source) => {
+                .WithParameters(".endproc", (dict, state, source) =>
+                {
 
                     if (!state.Procedure.Variables.HasValue("endproc"))
-                        state.Procedure.Variables.SetValue("endproc", state.Segment.Address);
+                        state.Procedure.Variables.SetValue("endproc", state.Segment.Address, VariableType.ProcEnd);
 
                     if (state.Procedure.Anonymous)
                         state.Warnings.Add(new EndProcOnAnonymousWarning(source));
@@ -194,55 +204,261 @@ namespace BitMagic.Compiler
                     state.Scope = proc.Scope;
                     state.Procedure = proc;
                 })
-                .WithParameters(".const", (dict, state, source) => {
+                .WithParameters(".const", (dict, state, source) =>
+                {
                     if (dict.ContainsKey("name") && dict.ContainsKey("value"))
                     {
-                        state.Procedure.Variables.SetValue(dict["name"], ParseStringToValue(dict["value"]));
+                        var value = dict["value"];
+
+                        var (address, requiresReval) = state.Evaluator.Evaluate(value, state.Procedure.Variables);
+
+                        if (requiresReval)
+                            throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
+
+
+                        state.Procedure.Variables.SetValue(dict["name"], address, VariableType.Constant);
                         return;
                     }
 
-                    foreach(var kv in dict)
+                    foreach (var kv in dict)
                     {
-                        state.Procedure.Variables.SetValue(kv.Key, ParseStringToValue(kv.Value));
+                        var (address, requiresReval) = state.Evaluator.Evaluate(kv.Value, state.Procedure.Variables);
+
+                        if (requiresReval)
+                            throw new Exception($"Cannot parse '{kv.Value}' into a value, constants cannot reference unprocessed variables.");
+
+
+                        state.Procedure.Variables.SetValue(kv.Key, address, VariableType.Constant);
                     }
-                }, new[] { "name", "value" })
-                .WithParameters(".org", (dict, state, source) => {
+                }, new[] { "name", "value" }, ' ')
+                .WithParameters(".constvar", (dict, state, source) =>
+                {
+                    if (!dict.ContainsKey("type"))
+                        throw new Exception("Missing type");
+
+                    var typenameResult = _variableType.Matches(dict["type"]);
+                    if (typenameResult.Count == 0)
+                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+
+                    var match = typenameResult.First();
+
+                    var typename = match.Groups["typename"].Value;
+                    var sizeString = match.Groups["size"].Value;
+
+                    if (string.IsNullOrWhiteSpace(typename))
+                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+
+                    typename = typename.ToLower();
+
+                    int size = 1;
+                    if (!string.IsNullOrEmpty(sizeString) && !int.TryParse(sizeString, out size))
+                    {
+                        throw new Exception($"Cannot parse {sizeString} into a int");
+                    }
+
+                    // find value
+                    string value;
+                    if (dict.ContainsKey("value"))
+                    {
+                        value = dict["value"];
+                    }
+                    else
+                        value = "0";
+
+                    // add the variable pointing at the data
+                    var name = dict["name"];
+                    var variableType = typename switch
+                    {
+                        "byte" => VariableType.Byte,
+                        "sbyte" => VariableType.Sbyte,
+                        "short" => VariableType.Short,
+                        "ushort" => VariableType.Ushort,
+                        "int" => VariableType.Int,
+                        "uint" => VariableType.Uint,
+                        "long" => VariableType.Long,
+                        "ulong" => VariableType.Ulong,
+                        "string" => VariableType.FixedStrings,
+                        _ => throw new Exception($"Unhandled type {typename}")
+                    };
+
+                    var (address, requiresReval) = state.Evaluator.Evaluate(value, state.Procedure.Variables);
+
+                    if (requiresReval)
+                        throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
+
+                    state.Procedure.Variables.SetValue(name, address, variableType, size);
+
+                }, new[] { "type", "name", "value" }, ' ')
+                .WithParameters(".var", (dict, state, source) =>
+                {
+                    if (!dict.ContainsKey("type"))
+                        throw new Exception("Missing type");
+
+                    var typenameResult = _variableType.Matches(dict["type"]);
+                    if (typenameResult.Count == 0)
+                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+
+                    var match = typenameResult.First();
+
+                    var typename = match.Groups["typename"].Value;
+                    var sizeString = match.Groups["size"].Value;
+
+                    if (string.IsNullOrWhiteSpace(typename))
+                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+
+                    typename = typename.ToLower();
+
+                    int size = 1;
+                    if (!string.IsNullOrEmpty(sizeString) && !int.TryParse(sizeString, out size))
+                    {
+                        throw new Exception($"Cannot parse {sizeString} into a int");
+                    }
+
+                    // find value
+                    string value;
+                    if (dict.ContainsKey("value"))
+                    {
+                        value = dict["value"];
+                    }
+                    else
+                        value = "0";
+
+                    // add the variable pointing at the data
+                    var name = dict["name"];
+                    var variableType = typename switch
+                    {
+                        "byte" => VariableType.Byte,
+                        "sbyte" => VariableType.Sbyte,
+                        "short" => VariableType.Short,
+                        "ushort" => VariableType.Ushort,
+                        "int" => VariableType.Int,
+                        "uint" => VariableType.Uint,
+                        "long" => VariableType.Long,
+                        "ulong" => VariableType.Ulong,
+                        "string" => VariableType.FixedStrings,
+                        _ => throw new Exception($"Unhandled type {typename}")
+                    };
+                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, size);
+
+                    // construct the data
+                    var dataline = new DataBlock(state.Segment.Address, source, size, variableType, value, state.Procedure, state.Evaluator);
+                    dataline.ProcessParts(false);
+                    state.Segment.Address += dataline.Data.Length;
+
+                    state.Procedure.AddData(dataline);
+                    if (_project.CompileOptions.DisplayData)
+                        dataline.WriteToConsole();
+
+                }, new[] { "type", "name", "value" }, ' ')
+                .WithParameters(".org", (dict, state, source) =>
+                {
                     var padto = ParseStringToValue(dict["address"]);
                     if (padto < state.Segment.Address)
                         throw new Exception($"pad with destination of ${padto:X4}, but segment address is already ${state.Segment.Address:X4}");
 
                     state.Segment.Address = padto;
                 }, new[] { "address" })
-                .WithParameters(".pad", (dict, state, source) => {
+                .WithParameters(".pad", (dict, state, source) =>
+                {
                     var size = ParseStringToValue(dict["size"]);
 
                     state.Segment.Address += size;
                 }, new[] { "size" })
-                .WithParameters(".align", (dict, state, source) => { 
+                .WithParameters(".padvar", (dict, state, source) =>
+                {
+                    if (!dict.ContainsKey("type"))
+                        throw new Exception("Missing type");
+
+                    var typenameResult = _variableType.Matches(dict["type"]);
+                    if (typenameResult.Count == 0)
+                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+
+                    var match = typenameResult.First();
+
+                    var typename = match.Groups["typename"].Value;
+                    var sizeString = match.Groups["size"].Value;
+
+                    if (string.IsNullOrWhiteSpace(typename))
+                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+
+                    typename = typename.ToLower();
+
+                    int size = 1;
+                    if (!string.IsNullOrEmpty(sizeString) && !int.TryParse(sizeString, out size))
+                    {
+                        throw new Exception($"Cannot parse {sizeString} into a int");
+                    }
+
+                    // find value
+                    string value;
+                    if (dict.ContainsKey("value"))
+                    {
+                        value = dict["value"];
+                    }
+                    else
+                        value = "0";
+
+                    // add the variable pointing at the data
+                    var name = dict["name"];
+                    var variableType = typename switch
+                    {
+                        "byte" => VariableType.Byte,
+                        "sbyte" => VariableType.Sbyte,
+                        "short" => VariableType.Short,
+                        "ushort" => VariableType.Ushort,
+                        "int" => VariableType.Int,
+                        "uint" => VariableType.Uint,
+                        "long" => VariableType.Long,
+                        "ulong" => VariableType.Ulong,
+                        "string" => VariableType.FixedStrings,
+                        _ => throw new Exception($"Unhandled type {typename}")
+                    };
+                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, size);
+
+                    var length = variableType switch
+                    {
+                        VariableType.Byte => 1,
+                        VariableType.Sbyte => 1,
+                        VariableType.Short => 2,
+                        VariableType.Ushort => 2,
+                        VariableType.Int => 4,
+                        VariableType.Uint => 4,
+                        VariableType.Long => 8,
+                        VariableType.Ulong => 8,
+                        VariableType.FixedStrings => 1,
+                        _ => throw new Exception($"Unhandled type {variableType}")
+                    };
+
+                    state.Segment.Address += size * length;
+                }, new[] { "type", "name" }, ' ')
+                .WithParameters(".align", (dict, state, source) =>
+                {
                     var boundry = ParseStringToValue(dict["boundary"]);
 
                     if (boundry == 0)
                         return;
 
-                    while(state.Segment.Address % boundry != 0)
+                    while (state.Segment.Address % boundry != 0)
                     {
                         state.Segment.Address++;
                     }
                 }, new[] { "boundary" })
-                .WithParameters(".importfile", (dict, state, source) => {
+                .WithParameters(".importfile", (dict, state, source) =>
+                {
                     var t = CompileFile(dict["filename"], state, null, source);
 
                     try
                     {
                         t.Wait();
-                    } 
-                    catch(Exception e)
+                    }
+                    catch (Exception e)
                     {
                         throw e.InnerException ?? e;
                     }
 
                 }, new[] { "filename" })
-                .WithLine(".byte", (source, state) => {
+                .WithLine(".byte", (source, state) =>
+                {
                     var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte);
                     dataline.ProcessParts(false);
                     state.Segment.Address += dataline.Data.Length;
@@ -251,7 +467,8 @@ namespace BitMagic.Compiler
                     if (_project.CompileOptions.DisplayData)
                         dataline.WriteToConsole();
                 })
-                .WithLine(".word", (source, state) => {
+                .WithLine(".word", (source, state) =>
+                {
                     var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsWord);
                     dataline.ProcessParts(false);
                     state.Segment.Address += dataline.Data.Length;
@@ -260,7 +477,7 @@ namespace BitMagic.Compiler
                     if (_project.CompileOptions.DisplayData)
                         dataline.WriteToConsole();
                 });
-        
+
 
         public async Task<CompileResult> Compile()
         {
@@ -274,12 +491,10 @@ namespace BitMagic.Compiler
 
             await CompileFile(_project.Code.Filename ?? _project.Source.Filename ?? "", state, _project.Code.Contents);
 
-            //PruneUnusedObjects(state);
-
             try
             {
                 Reval(state);
-            } 
+            }
             catch
             {
                 DisplayVariables(globals);
@@ -331,7 +546,7 @@ namespace BitMagic.Compiler
 
             foreach (var kv in _project.Machine.Variables.Values)
             {
-                state.Globals.SetValue(kv.Key, kv.Value);
+                state.Globals.SetValue(kv.Key, kv.Value.Value, kv.Value.VariableType, kv.Value.Length, kv.Value.Array);
             }
         }
 
@@ -503,7 +718,7 @@ namespace BitMagic.Compiler
 
         private void PruneUnusedObjects(CompileState state)
         {
-            foreach(var segment in state.Segments.Values)
+            foreach (var segment in state.Segments.Values)
             {
                 foreach (var procName in segment.DefaultProcedure.Where(i => !i.Value.Data.Any()).Select(i => i.Key).ToArray())
                 {
@@ -511,7 +726,7 @@ namespace BitMagic.Compiler
                 }
             }
 
-            foreach(var segmentName in state.Segments.Values.Where(i => !i.DefaultProcedure.Any()).Select(i => i.Name).ToArray())
+            foreach (var segmentName in state.Segments.Values.Where(i => !i.DefaultProcedure.Any()).Select(i => i.Name).ToArray())
             {
                 state.Segments.Remove(segmentName);
             }
@@ -542,7 +757,7 @@ namespace BitMagic.Compiler
                 }
             }
 
-            foreach(var p in proc.Procedures)
+            foreach (var p in proc.Procedures)
             {
                 RevalProc(p);
             }
@@ -573,7 +788,7 @@ namespace BitMagic.Compiler
             state.Segment.Address += toAdd.Data.Length;
         }
 
-        private void ParseCommand(SourceFilePosition source, CompileState state) => _commandParser.Process(source, state);        
+        private void ParseCommand(SourceFilePosition source, CompileState state) => _commandParser.Process(source, state);
 
         private int ParseStringToValue(string inp)
         {

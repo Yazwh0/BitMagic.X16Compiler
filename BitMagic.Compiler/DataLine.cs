@@ -9,8 +9,6 @@ namespace BitMagic.Compiler
     public class DataLine : IOutputData
     {
         public byte[] Data { get; private set; } = new byte[] { };
-/*        public string OriginalText { get; }
-        public int LineNumber { get; }*/
         public int Address { get; }
         public bool RequiresReval { get; private set; }
         public List<string> RequiresRevalNames { get; } = new List<string>();
@@ -21,11 +19,9 @@ namespace BitMagic.Compiler
         internal DataLine(Procedure proc, SourceFilePosition source, int address, LineType type)
         {
             Source = source;
-//            OriginalText = originalText;
             Address = address;
             _procedure = proc;
             _lineType = type;
-//            LineNumber = lineNumber;
         }
 
         internal enum LineType

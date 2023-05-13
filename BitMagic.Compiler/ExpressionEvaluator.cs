@@ -10,7 +10,6 @@ namespace BitMagic.Compiler
     {
         private readonly Asm6502ExpressionEvaluator _evaluator = new();
         private bool _requiresReval;
-        private ParameterSize _size;
         private IVariables? _variables = null;
         private readonly CompileState _state;
 
@@ -22,11 +21,10 @@ namespace BitMagic.Compiler
         }
 
         // not thread safe!!!
-        public (int Result, bool RequiresRecalc) Evaluate(string expression, IVariables variables, ParameterSize size)
+        public (int Result, bool RequiresRecalc) Evaluate(string expression, IVariables variables)
         {
             _variables = variables;
             _requiresReval = false;
-            _size = size;
             _evaluator.PreEvaluateVariable += _evaluator_PreEvaluateVariable;
             var result = (int)_evaluator.Evaluate(expression);
             _evaluator.PreEvaluateVariable -= _evaluator_PreEvaluateVariable;

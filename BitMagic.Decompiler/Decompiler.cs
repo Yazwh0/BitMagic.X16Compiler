@@ -34,7 +34,7 @@ public class Decompiler
             var debuggerAddress = address + bankAddress;
 
             string parameterSymbol = symbols.ContainsKey(debuggerAddress) ? symbols[debuggerAddress] : (
-                (additionalSymbols != null && additionalSymbols.ContainsKey(debuggerAddress)) ? additionalSymbols[debuggerAddress] : ""
+                (additionalSymbols?.ContainsKey(debuggerAddress) == true) ? additionalSymbols[debuggerAddress] : ""
                 );
 
             if (!string.IsNullOrWhiteSpace(parameterSymbol))
