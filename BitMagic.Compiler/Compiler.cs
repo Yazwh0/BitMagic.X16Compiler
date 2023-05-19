@@ -250,7 +250,7 @@ namespace BitMagic.Compiler
 
                     typename = typename.ToLower();
 
-                    int size = 1;
+                    int size = 0;
                     if (!string.IsNullOrEmpty(sizeString) && !int.TryParse(sizeString, out size))
                     {
                         throw new Exception($"Cannot parse {sizeString} into a int");
@@ -277,9 +277,11 @@ namespace BitMagic.Compiler
                         "uint" => VariableType.Uint,
                         "long" => VariableType.Long,
                         "ulong" => VariableType.Ulong,
-                        "string" => VariableType.FixedStrings,
+                        "string" => size == 0 ? VariableType.String : VariableType.FixedStrings,
                         _ => throw new Exception($"Unhandled type {typename}")
                     };
+
+                    size = size == 0 ? 1 : size;
 
                     var (address, requiresReval) = state.Evaluator.Evaluate(value, state.Procedure.Variables);
 
