@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BitMagic.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -191,7 +192,7 @@ public class Decompiler
     }
 }
 
-public class DecompileReturn
+public class DecompileReturn : ISourceFile
 {
     public string Name { get; set; } = "";
     public string Path { get; set; } = "";
@@ -204,6 +205,23 @@ public class DecompileReturn
 
     public int LastAddress { get; set; }
     public Dictionary<int, DissasemblyItem> Items { get; set; } = new();
+
+    public string GetContent()
+    {
+        var sb = new StringBuilder();
+
+        if (Volatile)
+        {
+            Generate();
+        }
+
+        foreach (var i in Items.Values)
+        {
+            sb.AppendLine(i.Instruction);
+        }
+
+        return sb.ToString();
+    }
 }
 
 public class DissasemblyItem
