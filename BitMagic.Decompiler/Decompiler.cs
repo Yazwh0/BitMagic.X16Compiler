@@ -196,12 +196,15 @@ public class DecompileReturn : ISourceFile
 {
     public string Name { get; set; } = "";
     public string Path { get; set; } = "";
-    public int ReferenceId { get; set; }
-    public string Origin { get; set; } = "";
+    public int? ReferenceId { get; set; } = null;
+    public SourceFileOrigin Origin { get; set; }
     public bool Volatile { get; set; } = false;
     public Action Generate { get; set; } = () => { };
     public int RamBank { get; set; }
     public int RomBank { get; set; }
+
+    public bool ActualFile => false;
+    public ISourceFile? Parent => null;
 
     public int LastAddress { get; set; }
     public Dictionary<int, DissasemblyItem> Items { get; set; } = new();

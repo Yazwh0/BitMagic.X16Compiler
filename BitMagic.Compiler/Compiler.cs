@@ -32,7 +32,7 @@ namespace BitMagic.Compiler
         public Compiler(string code)
         {
             _project = new Project();
-            _project.Code.Contents = code;
+            _project.Code = new StaticTextFile(code);
             _commandParser = CreateParser();
         }
 
@@ -483,15 +483,17 @@ namespace BitMagic.Compiler
 
         public async Task<CompileResult> Compile()
         {
-            if (_project.Code.Contents == null)
-                throw new ArgumentNullException(nameof(_project.Code.Contents));
+            var contents = _project.Code.GetContent();
+
+            if (contents == null)
+                throw new Exception("Code contents is null");
 
 
             var globals = new Variables("App");
 
             var state = new CompileState(globals, _project.OutputFile.Filename ?? "");
 
-            await CompileFile(_project.Code.Filename ?? _project.Source.Filename ?? "", state, _project.Code.Contents);
+            await CompileFile(_project.Code.Name, state, contents);
 
             try
             {
@@ -596,7 +598,7 @@ namespace BitMagic.Compiler
                 if (thisLine.StartsWith('.'))
                 {
                     previousLines.Clear();
-                    var source = new SourceFilePosition { LineNumber = lineNumber, Source = thisLine, Name = _project.Code.Filename ?? _project.Source.Filename ?? "" };
+                    var source = new SourceFilePosition { LineNumber = lineNumber, Source = thisLine, Name = _project.Code.Name, SourceFile = _project.Code };
                     ParseCommand(source, state);
                 }
                 else
@@ -604,7 +606,7 @@ namespace BitMagic.Compiler
                     var parts = thisLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
                     previousLines.AppendLine(line);
-                    var source = new SourceFilePosition { LineNumber = lineNumber, Source = previousLines.ToString(), Name = _project.Code.Filename ?? _project.Source.Filename ?? "" };
+                    var source = new SourceFilePosition { LineNumber = lineNumber, Source = previousLines.ToString(), Name = _project.Code.Name, SourceFile = _project.Code };
                     ParseAsm(parts, source, state);
                     previousLines.Clear();
                 }

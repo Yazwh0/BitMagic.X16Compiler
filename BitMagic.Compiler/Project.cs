@@ -7,9 +7,9 @@ namespace BitMagic.Compiler;
 
 public class Project
 {
-    public ProjectTextFile Source { get; } = new ProjectTextFile();
+    //public ProjectTextFile Source { get; } = new ProjectTextFile();
     public ProjectTextFile PreProcess { get; } = new ProjectTextFile();
-    public ProjectTextFile Code { get;  } = new ProjectTextFile();
+    public ISourceFile Code { get; set; } = new ProjectTextFile();
     public ProjectTextFile AssemblerObject { get; } = new ProjectTextFile();
 
     public ProjectBinFile OutputFile { get; } = new ProjectBinFile();
@@ -63,15 +63,37 @@ public class ProjectBinFile
     }
 }
 
-
-public class ProjectTextFile
+public class ProjectTextFile : ISourceFile
 {
     public string? Filename { get; set; } = null;
     public string? Contents { get; set; } = null;
 
+    public string Name => System.IO.Path.GetFileName(Filename);
+    public string Path => Filename;
+    public int? ReferenceId => null;
+    public SourceFileOrigin Origin => SourceFileOrigin.FileSystem;
+    public bool Volatile => false;
+    public Action Generate => () => { Load().GetAwaiter().GetResult(); };
+    public bool ActualFile => true;
+    public ISourceFile? Parent => null;
+
+    public ProjectTextFile()
+    {
+    }
+
+    public ProjectTextFile(string filename)
+    {
+        Filename = filename;
+    }
+
+    public string GetContent()
+    {
+        return Contents ?? "";
+    }
+
     public Task Load(string filename)
     {
-        Filename = Path.GetFullPath(filename);
+        Filename = System.IO.Path.GetFullPath(filename);
         return Load();
     }
 
@@ -83,9 +105,9 @@ public class ProjectTextFile
         Contents = await File.ReadAllTextAsync(Filename);
     }
 
-    public Task Save(string fielname)
+    public Task Save(string filename)
     {
-        Filename = Filename;
+        Filename = filename;
         return Save();
     }
 
@@ -95,6 +117,32 @@ public class ProjectTextFile
             throw new ArgumentNullException(nameof(Filename));
 
         await File.WriteAllTextAsync(Filename, Contents);
+    }
+}
+
+public class StaticTextFile : ISourceFile
+{
+    public string Name => "";
+
+    public string Path => "";
+
+    public int? ReferenceId => null;
+
+    public SourceFileOrigin Origin => SourceFileOrigin.Static;
+
+    public bool Volatile => false;
+
+    public Action Generate => () => { };
+
+    public bool ActualFile => false;
+
+    private readonly string _content;
+    public string GetContent() => _content;
+    public ISourceFile? Parent => null;
+
+    public StaticTextFile(string content)
+    {
+        _content = content;
     }
 }
 
