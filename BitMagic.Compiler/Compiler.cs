@@ -533,7 +533,7 @@ namespace BitMagic.Compiler
                 await _project.AssemblerObject.Save();
             }
 
-            var result = await GenerateDataFile(state);
+            var result = await GenerateDataFiles(state);
 
             return new CompileResult(state.Warnings.Select(w => w.ToString()), result, _project, state);
         }
@@ -632,7 +632,7 @@ namespace BitMagic.Compiler
             return File.ReadAllTextAsync(path);
         }
 
-        private async Task<Dictionary<string, NamedStream>> GenerateDataFile(CompileState state)
+        private async Task<Dictionary<string, NamedStream>> GenerateDataFiles(CompileState state)
         {
             var filenames = state.Segments.Select(i => i.Value.Filename ?? "").Distinct().ToArray();
 
@@ -646,21 +646,27 @@ namespace BitMagic.Compiler
                 var segments = state.Segments.Where(i => (i.Value.Filename ?? "") == filename).OrderBy(kv => kv.Value.StartAddress).Select(kv => kv.Value).ToArray();
 
                 var address = segments.First().StartAddress;
-                var writer = new FileWriter(segments.First().Name, filename, address);
-
 
                 // segments with filenames
                 bool header;
+                string thisFilename;
+                bool isMain;
 
                 // main output
                 if (string.IsNullOrWhiteSpace(filename))
                 {
                     header = string.IsNullOrWhiteSpace(_project.OutputFile.Filename) || _project.OutputFile.Filename.EndsWith(".prg", StringComparison.OrdinalIgnoreCase);
+                    thisFilename = $"{Path.GetFileNameWithoutExtension(_project.Code.Name).Replace(".generated", "")}.prg";
+                    isMain = true;
                 }
                 else
                 {   // segment with filename
                     header = !string.IsNullOrWhiteSpace(filename) && filename.EndsWith(".prg", StringComparison.OrdinalIgnoreCase);
+                    thisFilename = filename;
+                    isMain = false;
                 }
+
+                var writer = new FileWriter(segments.First().Name, thisFilename, address, isMain);
 
                 if (header)
                 {

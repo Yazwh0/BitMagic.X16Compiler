@@ -25,10 +25,12 @@ public class NamedStream : MemoryStream
 {
     public string SegmentName { get; set; }
     public string FileName { get; set; }
+    public bool IsMain { get; }
 
-    public NamedStream(string name, string fileName, byte[] data) : base(data, false)
+    public NamedStream(string name, string fileName, byte[] data, bool isMain) : base(data, false)
     {
         SegmentName = name;
         FileName = fileName;
+        IsMain = isMain;
     }
 }

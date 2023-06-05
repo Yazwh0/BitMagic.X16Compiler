@@ -20,17 +20,19 @@ namespace BitMagic.Compiler
     {
         public string FileName { get; }
         public string SegmentName { get; }
+        public bool IsMain { get; }
 
         private byte[] _header;
         private List<byte> _data = new List<byte>(0x10000);
         private int _startAddress;
 
-        public FileWriter(string segmentName, string fileName, int startAddress)
+        public FileWriter(string segmentName, string fileName, int startAddress, bool main)
         {
             SegmentName = segmentName;
             FileName = fileName;
             _startAddress = startAddress;
             _header = Array.Empty<byte>();
+            IsMain = main;
         }
 
         public void Add(byte toAdd, int address)
@@ -77,6 +79,6 @@ namespace BitMagic.Compiler
             _header = toAdd.ToArray();
         }
 
-        public NamedStream Write() => new (SegmentName, FileName, _header.Concat(_data).ToArray());        
+        public NamedStream Write() => new (SegmentName, FileName, _header.Concat(_data).ToArray(), IsMain);        
     }
 }
