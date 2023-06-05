@@ -30,7 +30,7 @@ public class Procedure
             var line = Data.LastOrDefault();
 
             if (line == null)
-                return null;                
+                return null;
 
             return line.Address + line.Data.Length - 1;
         }
