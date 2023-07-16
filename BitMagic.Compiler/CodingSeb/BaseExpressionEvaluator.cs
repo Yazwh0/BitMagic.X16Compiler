@@ -31,7 +31,7 @@ namespace CodingSeb.ExpressionEvaluator
     {
         #region Regex declarations
 
-        protected static readonly Regex varOrFunctionRegEx = new Regex(@"^((?<sign>[+-])|(?<prefixOperator>[+][+]|--)|(?<varKeyword>var)\s+|(?<dynamicKeyword>dynamic)\s+|((?<nullConditional>[?])?(?<inObject>\.))?)(?<name>[\p{L}_](?>[\p{L}_0-9]*))(?>\s*)((?<assignationOperator>(?<assignmentPrefix>[+\-*/%&|^]|<<|>>|\?\?)?=(?![=>]))|(?<postfixOperator>([+][+]|--)(?![\p{L}_0-9]))|((?<isgeneric>[<](?>([\p{L}_](?>[\p{L}_0-9]*)|(?>\s+)|[,\.])+|(?<gentag>[<])|(?<-gentag>[>]))*(?(gentag)(?!))[>])?(?<isfunction>[(])?))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        protected static readonly Regex varOrFunctionRegEx = new Regex(@"^((?<sign>[+-])|(?<prefixOperator>[+][+]|--)|(?<varKeyword>var)\s+|(?<dynamicKeyword>dynamic)\s+|((?<nullConditional>[?])?(?<inObject>\.))?)(?<name>[\p{L}_](?>[\p{L}_0-9:]*))(?>\s*)((?<assignationOperator>(?<assignmentPrefix>[+\-*/%&|^]|<<|>>|\?\?)?=(?![=>]))|(?<postfixOperator>([+][+]|--)(?![\p{L}_0-9]))|((?<isgeneric>[<](?>([\p{L}_](?>[\p{L}_0-9]*)|(?>\s+)|[,\.])+|(?<gentag>[<])|(?<-gentag>[>]))*(?(gentag)(?!))[>])?(?<isfunction>[(])?))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         //language=regex
         protected const string numberRegexOrigPattern = @"^(?<sign>[+-])?([0-9][0-9_{1}]*[0-9]|\d)(?<hasdecimal>{0}?([0-9][0-9_]*[0-9]|\d)(e[+-]?([0-9][0-9_]*[0-9]|\d))?)?(?<type>ul|[fdulm])?";
@@ -2298,9 +2298,10 @@ namespace CodingSeb.ExpressionEvaluator
                             }
                             else
                             {
-                                VariablePreEvaluationEventArg variablePreEvaluationEventArg = new VariablePreEvaluationEventArg(varFuncName, this, obj, genericsTypes, GetConcreteTypes);
+                                VariablePreEvaluationEventArg variablePreEvaluationEventArg = new VariablePreEvaluationEventArg(varFuncName, i, this, obj, genericsTypes, GetConcreteTypes, expression);
 
                                 PreEvaluateVariable?.Invoke(this, variablePreEvaluationEventArg);
+                                i = variablePreEvaluationEventArg.Index;
 
                                 if (variablePreEvaluationEventArg.CancelEvaluation)
                                 {
@@ -2476,9 +2477,10 @@ namespace CodingSeb.ExpressionEvaluator
                     }
                     else
                     {
-                        VariablePreEvaluationEventArg variablePreEvaluationEventArg = new VariablePreEvaluationEventArg(varFuncName, this, genericTypes: genericsTypes, evaluateGenericTypes: GetConcreteTypes);
-
+                        VariablePreEvaluationEventArg variablePreEvaluationEventArg = new VariablePreEvaluationEventArg(varFuncName, i, this, genericTypes: genericsTypes, evaluateGenericTypes: GetConcreteTypes, fullVariable: expression);
+                        
                         PreEvaluateVariable?.Invoke(this, variablePreEvaluationEventArg);
+                        i = variablePreEvaluationEventArg.Index;
 
                         if (variablePreEvaluationEventArg.CancelEvaluation)
                         {
@@ -5028,14 +5030,19 @@ namespace CodingSeb.ExpressionEvaluator
     /// </summary>
     public partial class VariablePreEvaluationEventArg : VariableEvaluationEventArg
     {
-        public VariablePreEvaluationEventArg(string name, BaseExpressionEvaluator evaluator = null, object onInstance = null, string genericTypes = null, Func<string, Type[]> evaluateGenericTypes = null)
+        public VariablePreEvaluationEventArg(string name, int index, BaseExpressionEvaluator evaluator = null, object onInstance = null, string genericTypes = null, Func<string, Type[]> evaluateGenericTypes = null, string fullVariable = "")
             : base(name, evaluator, onInstance, genericTypes, evaluateGenericTypes)
-        { }
+        {
+            FullVariable = fullVariable;
+            Index = index;
+         }
 
         /// <summary>
         /// If set to true cancel the evaluation of the current variable, field or property and throw an exception it does not exists
         /// </summary>
         public bool CancelEvaluation { get; set; }
+        public string FullVariable { get; }
+        public int Index { get; set; }
     }
 
     /// <summary>
