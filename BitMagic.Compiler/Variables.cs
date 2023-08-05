@@ -25,7 +25,10 @@ public class VariableException : CompilerException
 public class Variables : IVariables
 {
     [JsonProperty]
-    private readonly Dictionary<string, IAsmVariable> _variables = new Dictionary<string, IAsmVariable>();
+    private readonly Dictionary<string, IAsmVariable> _variables = new();
+
+    [JsonProperty]
+    private readonly List<IAsmVariable> _ambiguousVariables = new();
 
     private readonly Variables? _parent;
     private readonly List<Variables> _children = new List<Variables>();
@@ -34,6 +37,9 @@ public class Variables : IVariables
 
     [JsonIgnore]
     public IReadOnlyDictionary<string, IAsmVariable> Values => _variables;
+
+    [JsonIgnore]
+    public IList<IAsmVariable> AmbiguousVariables => _ambiguousVariables;
 
     public Variables(IVariables defaultValues, string @namespace)
     {
@@ -157,10 +163,28 @@ public class Variables : IVariables
 
     public void SetValue(string name, int value, VariableType variableType, int length = 0, bool array = false)
     {
-        if (_variables.ContainsKey("name"))
-            throw new Exception($"Variable already defined {name}");
+        var toAdd = new AsmVariable { Name = name, Value = value, VariableType = variableType, Length = length, Array = array };
+        if (variableType == VariableType.LabelPointer) // consider all labels to be ambiguous when creating
+        {
+            _ambiguousVariables.Add(toAdd);
+            return;
+        }
 
-        _variables[name] = new AsmVariable { Name = name, Value = value, VariableType = variableType, Length = length, Array = array };
+        _variables[name] = toAdd;
+    }
+
+    public void MakeExplicit()
+    {
+        var variables = _ambiguousVariables.GroupBy(i => i.Name).Where(i => i.Count() == 1).Select(i => i.First()).ToArray();
+
+        foreach(var i in variables)
+        {
+            if (_variables.ContainsKey(i.Name))
+                throw new Exception($"Variable already defined {i.Name}");
+
+            _ambiguousVariables.Remove(i);
+            _variables.Add(i.Name, i);
+        }
     }
 
     public bool HasValue(string name) => _variables.ContainsKey(name);

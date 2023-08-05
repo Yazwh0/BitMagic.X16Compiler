@@ -66,7 +66,7 @@ internal class DataBlock : IOutputData
         }
         else
         {
-            var (result, requiresReval) = _expressionEvaluator.Evaluate(_expression, _procedure.Variables);
+            var (result, requiresReval) = _expressionEvaluator.Evaluate(_expression, _procedure.Variables, Address, finalParse);
             RequiresReval = requiresReval;
 
             BitConverter.GetBytes(result)[.._size].CopyTo(data, 0);

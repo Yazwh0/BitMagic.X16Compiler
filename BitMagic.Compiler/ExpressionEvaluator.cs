@@ -3,6 +3,8 @@ using BitMagic.Compiler.CodingSeb;
 using CodingSeb.ExpressionEvaluator;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace BitMagic.Compiler
 {
@@ -12,6 +14,7 @@ namespace BitMagic.Compiler
         private bool _requiresReval;
         private IVariables? _variables = null;
         private readonly CompileState _state;
+        private static readonly Regex _relativeLabel = new Regex(@"(?<relative>[-+]*)(?<label>[\w\d_]*)", RegexOptions.Compiled);
 
         public List<string> RequiresRevalNames = new();
 
@@ -21,8 +24,58 @@ namespace BitMagic.Compiler
         }
 
         // not thread safe!!!
-        public (int Result, bool RequiresRecalc) Evaluate(string expression, IVariables variables)
+        public (int Result, bool RequiresRecalc) Evaluate(string expression, IVariables variables, int address, bool final)
         {
+            // first check its not a relative label
+            if (expression[0] is '-' or '+')
+            {
+                var match = _relativeLabel.Match(expression);
+
+                if (match.Success)
+                {
+                    if (!final)
+                        return (0xabcd, true);  // we always reval ambigous labels
+
+                    var relative = match.Groups["relative"].Value;
+                    var label = match.Groups["label"].Value;
+
+                    var direction = 0;
+                    for(var i = 0; i < relative.Length; i++)
+                    {
+                        if (relative[i] == '-')
+                            direction--;
+                        else
+                            direction++;
+                    }
+
+                    if (direction == 0)
+                        throw new Exception($"Parsing relative label in expression {expression} rendered no direction");
+
+                    if (variables.Values.ContainsKey(label))
+                    {
+                        var l = variables.Values[label];
+
+                        if (l.Value > address && direction == 1)
+                            return (l.Value, false);
+
+                        if (l.Value < address && direction == -1)
+                            return (l.Value, false);
+
+                        throw new Exception($"Searching for relative label {label}, with a count of {direction}, but no label found");
+                    }
+
+                    var labels = direction > 0 ?
+                        variables.AmbiguousVariables.Where(i => i.Name == label && i.Value >= address).OrderBy(i => i.Value) :
+                        variables.AmbiguousVariables.Where(i => i.Name == label && i.Value < address).OrderByDescending(i => i.Value);
+
+                    var item = labels.Skip(Math.Abs(direction) - 1).FirstOrDefault();
+
+                    if (item != null)
+                        return (item.Value, false);
+
+                    return (0xabcd, true); // error
+                }
+            }
             _variables = variables;
             _requiresReval = false;
             _evaluator.PreEvaluateVariable += _evaluator_PreEvaluateVariable;

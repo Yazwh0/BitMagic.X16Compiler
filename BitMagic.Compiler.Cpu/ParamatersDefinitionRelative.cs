@@ -16,7 +16,7 @@ namespace BitMagic.Compiler.Cpu
 
             var toParse = GetParameter(parameters);
 
-            var (Result, RequiresRecalc) = expressionEvaluator.Evaluate(toParse, variables);
+            var (Result, RequiresRecalc) = expressionEvaluator.Evaluate(toParse, variables, line.Address, final);
 
             var offset = Result - line.Address - opCode.OpCodeLength + Offset;
 

@@ -64,6 +64,7 @@ namespace BitMagic.Machines
     internal class NoVariables : IVariables
     {
         public IReadOnlyDictionary<string, IAsmVariable> Values => new Dictionary<string, IAsmVariable>();
+        public IList<IAsmVariable> AmbiguousVariables => Array.Empty<IAsmVariable>();
 
         public bool TryGetValue(string name, int lineNumber, out int result)
         {

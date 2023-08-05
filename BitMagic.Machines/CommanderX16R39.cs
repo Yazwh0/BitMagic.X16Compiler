@@ -85,6 +85,7 @@ namespace BitMagic.Machines
         }.ToDictionary(i => i.Key, i => (IAsmVariable)(new AsmVariable { Name = i.Key, Value = i.Value, VariableType = VariableType.Ushort }));
 
         public IReadOnlyDictionary<string, IAsmVariable> Values => _defaults;
+        public IList<IAsmVariable> AmbiguousVariables => Array.Empty<IAsmVariable>();
 
         // todo: create abstract class or similar.
         public bool TryGetValue(string name, int lineNumber, out int result) => throw new Exception();

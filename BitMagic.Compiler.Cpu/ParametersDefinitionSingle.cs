@@ -22,7 +22,7 @@ namespace BitMagic.Compiler.Cpu
 
             var toParse = GetParameter(parameters);            
 
-            var (Result, RequiresRecalc) = expressionEvaluator.Evaluate(toParse, variables);
+            var (Result, RequiresRecalc) = expressionEvaluator.Evaluate(toParse, variables, line.Address, final);
 
             if ((ParameterSize == ParameterSize.Bit8 && (Result < sbyte.MinValue || Result > byte.MaxValue)) ||
                 (ParameterSize == ParameterSize.Bit16 && (Result < short.MinValue || Result > ushort.MaxValue)) ||

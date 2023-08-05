@@ -42,7 +42,7 @@ namespace BitMagic.Compiler
                     if (label == ".:")
                         throw new Exception("Labels require a name. .: is not valid.");
 
-                    state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableType.Pointer);
+                    state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableType.LabelPointer);
                 })
                 //.WithParameters(".scopedelimiter",  (dict, state, source) =>
                 //{
@@ -210,7 +210,7 @@ namespace BitMagic.Compiler
                     {
                         var value = dict["value"];
 
-                        var (address, requiresReval) = state.Evaluator.Evaluate(value, state.Procedure.Variables);
+                        var (address, requiresReval) = state.Evaluator.Evaluate(value, state.Procedure.Variables, -1, false);
 
                         if (requiresReval)
                             throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
@@ -222,7 +222,7 @@ namespace BitMagic.Compiler
 
                     foreach (var kv in dict)
                     {
-                        var (address, requiresReval) = state.Evaluator.Evaluate(kv.Value, state.Procedure.Variables);
+                        var (address, requiresReval) = state.Evaluator.Evaluate(kv.Value, state.Procedure.Variables, -1, false);
 
                         if (requiresReval)
                             throw new Exception($"Cannot parse '{kv.Value}' into a value, constants cannot reference unprocessed variables.");
@@ -283,7 +283,7 @@ namespace BitMagic.Compiler
 
                     size = size == 0 ? 1 : size;
 
-                    var (address, requiresReval) = state.Evaluator.Evaluate(value, state.Procedure.Variables);
+                    var (address, requiresReval) = state.Evaluator.Evaluate(value, state.Procedure.Variables, -1, false);
 
                     if (requiresReval)
                         throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
@@ -756,6 +756,7 @@ namespace BitMagic.Compiler
 
         private void RevalProc(Procedure proc)
         {
+            proc.Variables.MakeExplicit();
             foreach (var line in proc.Data.Where(l => l.RequiresReval))
             {
                 line.ProcessParts(true);
