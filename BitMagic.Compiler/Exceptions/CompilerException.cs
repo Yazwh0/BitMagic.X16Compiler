@@ -1,14 +1,12 @@
 ﻿using System;
 
-namespace BitMagic.Compiler.Exceptions
+namespace BitMagic.Compiler.Exceptions;
+
+public abstract class CompilerException : Exception
 {
-    public abstract class CompilerException : Exception
+    public abstract string ErrorDetail { get; }
+
+    protected CompilerException(string message) : base(message)
     {
-        public abstract string ErrorDetail { get; }
-
-        public CompilerException(string message) : base(message)
-        {
-        }
     }
-
 }

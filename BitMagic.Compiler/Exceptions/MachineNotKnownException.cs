@@ -1,15 +1,15 @@
-﻿namespace BitMagic.Compiler.Exceptions
+﻿using BitMagic.Common;
+
+namespace BitMagic.Compiler.Exceptions;
+
+public class MachineNotKnownException : CompilerSourceException
 {
-    public class MachineNotKnownException : CompilerException
+    public string MachineName { get; }
+
+    public MachineNotKnownException(SourceFilePosition source, string name) : base(source, $"Machine '{name}' not known.")
     {
-        public string MachineName { get; }
-
-        public MachineNotKnownException(string name) : base("Machine not known.")
-        {
-            MachineName = name;
-        }
-
-        public override string ErrorDetail => $"Unknown machine '{MachineName}'.";
+        MachineName = name;
     }
 
+    public override string ErrorDetail => $"Unknown machine '{MachineName}'.";
 }

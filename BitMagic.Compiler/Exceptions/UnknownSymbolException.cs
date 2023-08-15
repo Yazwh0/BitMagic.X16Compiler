@@ -1,18 +1,11 @@
 ﻿using BitMagic.Common;
 using BitMagic.Compiler.Exceptions;
 
-namespace BitMagic.Compiler.Exceptions
+namespace BitMagic.Compiler.Exceptions;
+
+public class UnknownSymbolException : CompilerLineException
 {
-    public class UnknownSymbolException : CompilerException
+    public UnknownSymbolException(IOutputData line, string message) : base(line, message)
     {
-        public IOutputData Line { get; }
-
-        public UnknownSymbolException(IOutputData line, string message) : base(message)
-        {
-            Line = line;
-        }
-
-        public override string ErrorDetail => Line.Source.ToString();
     }
-
 }

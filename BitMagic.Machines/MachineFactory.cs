@@ -66,7 +66,7 @@ namespace BitMagic.Machines
         public IReadOnlyDictionary<string, IAsmVariable> Values => new Dictionary<string, IAsmVariable>();
         public IList<IAsmVariable> AmbiguousVariables => Array.Empty<IAsmVariable>();
 
-        public bool TryGetValue(string name, int lineNumber, out int result)
+        public bool TryGetValue(string name, SourceFilePosition source, out int result)
         {
             result = 0;
             return false;

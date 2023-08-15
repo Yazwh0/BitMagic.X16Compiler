@@ -84,7 +84,7 @@ namespace BitMagic.Compiler
 
         private void _evaluator_PreEvaluateVariable(object? sender, VariablePreEvaluationEventArg e)
         {
-            if (_procedure.Variables.TryGetValue(e.Name, Source.LineNumber, out var result))
+            if (_procedure.Variables.TryGetValue(e.Name, Source, out var result))
             {
                 e.Value = result;
                 RequiresReval = false;

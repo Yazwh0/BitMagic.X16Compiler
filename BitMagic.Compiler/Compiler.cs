@@ -53,21 +53,15 @@ namespace BitMagic.Compiler
                     var newMachine = MachineFactory.GetMachine(dict["name"]);
 
                     if (newMachine == null)
-                        throw new MachineNotKnownException(dict["name"]);
+                        throw new MachineNotKnownException(source, dict["name"]);
 
                     if (_project.Machine != null && newMachine.Name != _project.Machine.Name && newMachine.Version != _project.Machine.Version)
-                        throw new MachineAlreadySetException(_project.Machine.Name, dict["name"]);
+                        throw new MachineAlreadySetException(source, _project.Machine.Name, dict["name"]);
 
                     if (_project.Machine == null)
                     {
                         _project.Machine = newMachine;
                     }
-
-                    //if (_project.MachineEmulator != null && !_project.MachineEmulator.Initialised)
-                    //{
-                    //    _project.MachineEmulator.SetRom(new byte[0x4000]);
-                    //    _project.MachineEmulator.Build();
-                    //}
 
                     InitFromMachine(state);
 
@@ -78,7 +72,7 @@ namespace BitMagic.Compiler
                     var cpu = CpuFactory.GetCpu(dict["name"]);
 
                     if (cpu == null)
-                        throw new CpuNotKnownException(dict["name"]);
+                        throw new CpuNotKnownException(source, dict["name"]);
 
                     machine.Cpu = cpu;
 
@@ -210,7 +204,7 @@ namespace BitMagic.Compiler
                     {
                         var value = dict["value"];
 
-                        var (address, requiresReval) = state.Evaluator.Evaluate(value, state.Procedure.Variables, -1, false);
+                        var (address, requiresReval) = state.Evaluator.Evaluate(value, source, state.Procedure.Variables, -1, false);
 
                         if (requiresReval)
                             throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
@@ -222,7 +216,7 @@ namespace BitMagic.Compiler
 
                     foreach (var kv in dict)
                     {
-                        var (address, requiresReval) = state.Evaluator.Evaluate(kv.Value, state.Procedure.Variables, -1, false);
+                        var (address, requiresReval) = state.Evaluator.Evaluate(kv.Value, source, state.Procedure.Variables, -1, false);
 
                         if (requiresReval)
                             throw new Exception($"Cannot parse '{kv.Value}' into a value, constants cannot reference unprocessed variables.");
@@ -283,7 +277,7 @@ namespace BitMagic.Compiler
 
                     size = size == 0 ? 1 : size;
 
-                    var (address, requiresReval) = state.Evaluator.Evaluate(value, state.Procedure.Variables, -1, false);
+                    var (address, requiresReval) = state.Evaluator.Evaluate(value, source, state.Procedure.Variables, -1, false);
 
                     if (requiresReval)
                         throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
@@ -765,7 +759,7 @@ namespace BitMagic.Compiler
 
                 if (line.RequiresReval)
                 {
-                    throw new CompilerLineException(line, $"Unknown name {string.Join(", ", line.RequiresRevalNames.Select(i => $"'{i}'"))}");
+                    throw new UnknownSymbolException(line, $"Unknown name {string.Join(", ", line.RequiresRevalNames.Select(i => $"'{i}'"))}");
                 }
             }
 

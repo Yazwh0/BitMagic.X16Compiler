@@ -15,6 +15,7 @@ namespace BitMagic.Compiler
         private IVariables? _variables = null;
         private readonly CompileState _state;
         private static readonly Regex _relativeLabel = new Regex(@"(?<relative>[-+]*)(?<label>[\w\d_]*)", RegexOptions.Compiled);
+        private SourceFilePosition _source;
 
         public List<string> RequiresRevalNames = new();
 
@@ -24,8 +25,9 @@ namespace BitMagic.Compiler
         }
 
         // not thread safe!!!
-        public (int Result, bool RequiresRecalc) Evaluate(string expression, IVariables variables, int address, bool final)
+        public (int Result, bool RequiresRecalc) Evaluate(string expression, SourceFilePosition source, IVariables variables, int address, bool final)
         {
+            _source = source;
             // first check its not a relative label
             if (expression[0] is '-' or '+')
             {
@@ -90,7 +92,7 @@ namespace BitMagic.Compiler
             if (_variables == null)
                 throw new NullReferenceException("_procedure is null");
 
-            if (_variables.TryGetValue(e.Name, 0, out var result))
+            if (_variables.TryGetValue(e.Name, _source, out var result))
             {
                 e.Value = result;
                 _requiresReval = false;

@@ -1,26 +1,11 @@
 ﻿using BitMagic.Common;
-using BitMagic.Compiler.Exceptions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 using System.Text.RegularExpressions;
 
 namespace BitMagic.Compiler;
-
-public class VariableException : CompilerException
-{
-    public string VariableName { get; }
-
-    public VariableException(string variableName, string message) : base(message)
-    {
-        VariableName = variableName;
-    }
-
-    public override string ErrorDetail => VariableName;
-}
 
 public class Variables : IVariables
 {
@@ -69,7 +54,7 @@ public class Variables : IVariables
     }
 
     // Goes up the variable tree looking for a perfect match.
-    public bool TryGetValue(string name, int lineNumber, out int result)
+    public bool TryGetValue(string name, SourceFilePosition source, out int result)
     {
         if (_variables.ContainsKey(name))
         {
@@ -92,7 +77,7 @@ public class Variables : IVariables
 
         if (_parent != null)
         {
-            return _parent.TryGetValue(name, lineNumber, out result);
+            return _parent.TryGetValue(name, source, out result);
         }
 
         var matches = new List<(string Name, int Value)>(1);
@@ -141,7 +126,7 @@ public class Variables : IVariables
                 result = matches[0].Value;
                 return true;
             default:
-                throw new VariableException(name, $"Cannot find unique match. Possibilities: {string.Join(", ", matches.Select(i => i.Name))}");
+                throw new VariableException(source, name, $"Cannot find unique match for {name}. Possibilities: {string.Join(", ", matches.Select(i => i.Name))}");
         }
     }
 

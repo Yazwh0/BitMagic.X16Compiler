@@ -1,18 +1,11 @@
 ﻿using BitMagic.Common;
 using BitMagic.Compiler.Exceptions;
 
-namespace BitMagic.Compiler.Exceptions
+namespace BitMagic.Compiler.Exceptions;
+
+public class CompilerBranchToFarException : CompilerLineException
 {
-    public class CompilerBranchToFarException : CompilerException
+    public CompilerBranchToFarException(IOutputData line, string message) : base(line, message)
     {
-        public IOutputData Line { get; }
-
-        public CompilerBranchToFarException(IOutputData line, string message) : base(message)
-        {
-            Line = line;
-        }
-
-        public override string ErrorDetail => Line.Source.ToString();
     }
-
 }

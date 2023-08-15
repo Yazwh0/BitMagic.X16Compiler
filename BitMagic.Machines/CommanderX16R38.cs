@@ -89,6 +89,6 @@ namespace BitMagic.Machines
         public IList<IAsmVariable> AmbiguousVariables => Array.Empty<IAsmVariable>();
 
         // todo: create abstract class or similar.
-        public bool TryGetValue(string name, int lineNumber, out int result) => throw new Exception();
+        public bool TryGetValue(string name, SourceFilePosition source, out int result) => throw new Exception();
     }
 }
