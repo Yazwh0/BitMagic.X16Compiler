@@ -745,6 +745,8 @@ namespace BitMagic.Compiler
         private void Reval(CompileState state)
         {
             Console.WriteLine("Revaluations:");
+            state.Globals.MakeExplicit();
+
             foreach (var segment in state.Segments.Values)
             {
                 foreach (var proc in segment.DefaultProcedure.Values)
@@ -756,7 +758,6 @@ namespace BitMagic.Compiler
 
         private void RevalProc(Procedure proc)
         {
-            proc.Variables.MakeExplicit();
             foreach (var line in proc.Data.Where(l => l.RequiresReval))
             {
                 line.ProcessParts(true);

@@ -185,6 +185,11 @@ public class Variables : IVariables
             _ambiguousVariables.Remove(i);
             _variables.Add(i.Name, i);
         }
+
+        foreach(var child in _children)
+        {
+            child.MakeExplicit();
+        }
     }
 
     public bool HasValue(string name) => _variables.ContainsKey(name);

@@ -66,7 +66,7 @@ namespace BitMagic.Compiler
 
                     var labels = direction > 0 ?
                         variables.AmbiguousVariables.Where(i => i.Name == label && i.Value >= address).OrderBy(i => i.Value) :
-                        variables.AmbiguousVariables.Where(i => i.Name == label && i.Value < address).OrderByDescending(i => i.Value);
+                        variables.AmbiguousVariables.Where(i => i.Name == label && i.Value <= address).OrderByDescending(i => i.Value);
 
                     var item = labels.Skip(Math.Abs(direction) - 1).FirstOrDefault();
 
