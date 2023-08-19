@@ -21,7 +21,7 @@ namespace BitMagic.Cpu
         public IReadOnlyDictionary<AccessMode, IParametersDefinition> ParameterDefinitions { get; } = new IParametersDefinition[] {
              new ParametersCommaSeparated() { AccessMode = AccessMode.ZerpPageRel, Order = 10,
                  Left = new ParametersDefinitionSurround() {AccessMode = AccessMode.ZeroPage, ParameterSize = ParameterSize.Bit8, Order = 40 },
-                 Right = new ParamatersDefinitionRelative() {AccessMode = AccessMode.Relative, ParameterSize = ParameterSize.Bit8, Order = 40 }
+                 Right = new ParamatersDefinitionRelative() {AccessMode = AccessMode.Relative, ParameterSize = ParameterSize.Bit8, Order = 40, Offset = -2 }
              },
              new ParametersDefinitionSurround() {AccessMode = AccessMode.Immediate, StartsWith = "#", ParameterSize = ParameterSize.Bit8, Order = 10 },
              new ParametersDefinitionSurround() {AccessMode = AccessMode.IndirectX, StartsWith = "(", EndsWith = ",X)", ParameterSize = ParameterSize.Bit8, Order = 20 },
