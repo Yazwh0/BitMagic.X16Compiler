@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using BitMagic.Compiler.Exceptions;
 using BitMagic.Compiler.Warnings;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json.Linq;
 
 namespace BitMagic.Compiler
 {
@@ -655,9 +654,12 @@ namespace BitMagic.Compiler
                 }
                 else
                 {   // segment with filename
-                    header = !string.IsNullOrWhiteSpace(filename) && filename.EndsWith(".prg", StringComparison.OrdinalIgnoreCase);
+                    header = !string.IsNullOrWhiteSpace(filename) && (
+                        filename.EndsWith(".prg", StringComparison.OrdinalIgnoreCase) ||
+                        filename.EndsWith(".x16", StringComparison.OrdinalIgnoreCase));
+
                     thisFilename = filename;
-                    isMain = false;
+                    isMain = _project.OutputFile.Filename == filename;
                 }
 
                 var writer = new FileWriter(segments.First().Name, thisFilename, address, isMain);
