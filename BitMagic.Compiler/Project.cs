@@ -16,7 +16,7 @@ public class Project
     public ProjectBinFile RomFile { get; } = new ProjectBinFile();
 
     public Options Options { get; } = new Options();
-    public CompileOptions CompileOptions { get; } = new CompileOptions();
+    public CompileOptions CompileOptions { get; set; } = new CompileOptions();
 
     public IMachine? Machine { get; set; }
     //public IMachineEmulator? MachineEmulator => Machine as IMachineEmulator;
