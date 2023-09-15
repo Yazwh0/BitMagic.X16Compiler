@@ -134,7 +134,7 @@ namespace BitMagic.Compiler
                     state.Scope = state.ScopeFactory.GetScope($"Main");
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
 
-                }, new[] { "name", "address", "filename", "maxsize" }, ' ')
+                }, new[] { "name", "address", "maxsize" , "filename" }, ' ')
                 .WithParameters(".endsegment", (dict, state, source) =>
                 {
                     state.Segment = state.Segments["Main"];
@@ -244,7 +244,8 @@ namespace BitMagic.Compiler
                     typename = typename.ToLower();
 
                     int size = 0;
-                    if (!string.IsNullOrEmpty(sizeString) && !int.TryParse(sizeString, out size))
+                    bool isArray = !string.IsNullOrWhiteSpace(sizeString);
+                    if (isArray && !int.TryParse(sizeString, out size))
                     {
                         throw new Exception($"Cannot parse {sizeString} into a int");
                     }
@@ -281,7 +282,7 @@ namespace BitMagic.Compiler
                     if (requiresReval)
                         throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
 
-                    state.Procedure.Variables.SetValue(name, address, variableType, size);
+                    state.Procedure.Variables.SetValue(name, address, variableType, size, isArray);
 
                 }, new[] { "type", "name", "value" }, ' ')
                 .WithParameters(".var", (dict, state, source) =>
@@ -304,7 +305,8 @@ namespace BitMagic.Compiler
                     typename = typename.ToLower();
 
                     int size = 1;
-                    if (!string.IsNullOrEmpty(sizeString) && !int.TryParse(sizeString, out size))
+                    bool isArray = !string.IsNullOrWhiteSpace(sizeString);
+                    if (isArray && !int.TryParse(sizeString, out size))
                     {
                         throw new Exception($"Cannot parse {sizeString} into a int");
                     }
@@ -333,7 +335,7 @@ namespace BitMagic.Compiler
                         "string" => VariableType.FixedStrings,
                         _ => throw new Exception($"Unhandled type {typename}")
                     };
-                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, size);
+                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, size, isArray);
 
                     // construct the data
                     var dataline = new DataBlock(state.Segment.Address, source, size, variableType, value, state.Procedure, state.Evaluator);
@@ -379,19 +381,11 @@ namespace BitMagic.Compiler
                     typename = typename.ToLower();
 
                     int size = 1;
-                    if (!string.IsNullOrEmpty(sizeString) && !int.TryParse(sizeString, out size))
+                    var isArray = !string.IsNullOrWhiteSpace(sizeString);
+                    if (isArray && !int.TryParse(sizeString, out size))
                     {
                         throw new Exception($"Cannot parse {sizeString} into a int");
                     }
-
-                    // find value
-                    string value;
-                    if (dict.ContainsKey("value"))
-                    {
-                        value = dict["value"];
-                    }
-                    else
-                        value = "0";
 
                     // add the variable pointing at the data
                     var name = dict["name"];
@@ -408,7 +402,8 @@ namespace BitMagic.Compiler
                         "string" => VariableType.FixedStrings,
                         _ => throw new Exception($"Unhandled type {typename}")
                     };
-                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, size);
+
+                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, size, isArray);
 
                     var length = variableType switch
                     {
@@ -438,7 +433,7 @@ namespace BitMagic.Compiler
                         state.Segment.Address++;
                     }
                 }, new[] { "boundary" })
-                .WithParameters(".importfile", (dict, state, source) =>
+                .WithParameters(".insertfile", (dict, state, source) =>
                 {
                     var t = CompileFile(dict["filename"], state, null, source);
 
@@ -633,7 +628,7 @@ namespace BitMagic.Compiler
 
             foreach (var filename in filenames)
             {
-                var toSave = new List<byte>(0x10000);
+                //var toSave = new List<byte>(0x10000);
 
                 // todo: enforce one segment, one filename???
                 var segments = state.Segments.Where(i => (i.Value.Filename ?? "") == filename).OrderBy(kv => kv.Value.StartAddress).Select(kv => kv.Value).ToArray();
@@ -668,8 +663,8 @@ namespace BitMagic.Compiler
                 {
                     var headerBytes = new byte[] { (byte)(address & 0xff), (byte)((address & 0xff00) >> 8) };
 
-                    toSave.Add((byte)(address & 0xff));
-                    toSave.Add((byte)((address & 0xff00) >> 8));
+                    //toSave.Add((byte)(address & 0xff));
+                    //toSave.Add((byte)((address & 0xff00) >> 8));
 
                     writer.SetHeader(headerBytes);
                 }
@@ -697,7 +692,11 @@ namespace BitMagic.Compiler
                     //}
                 }
 
+                if (filename.StartsWith(':') && writer.HasData)
+                    throw new CompilerSegmentHasDataException(segments.First().Name);
+
                 var result = writer.Write();
+
                 toReturn.Add(result.SegmentName, result);
 
                 //if (string.IsNullOrWhiteSpace(filename))

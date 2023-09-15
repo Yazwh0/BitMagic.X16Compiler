@@ -74,6 +74,8 @@ namespace BitMagic.Compiler
             }
         }
 
+        public bool HasData => _data.Count > 0;
+
         public void SetHeader(IEnumerable<byte> toAdd)
         {
             _header = toAdd.ToArray();
