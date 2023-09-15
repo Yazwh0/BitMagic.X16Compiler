@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using CodingSeb.ExpressionEvaluator;
 
 namespace BitMagic.Compiler.CodingSeb;
@@ -32,8 +30,8 @@ public class Asm6502ExpressionEvaluator : BaseExpressionEvaluator
 
     protected override void Init()
     {
-        unaryOperatorsDictionary.Add(">", Asm6502Operator.LowByte);
-        unaryOperatorsDictionary.Add("<", Asm6502Operator.HighByte);
+        unaryOperatorsDictionary.Add("<", Asm6502Operator.LowByte);
+        unaryOperatorsDictionary.Add(">", Asm6502Operator.HighByte);
         unaryOperatorsDictionary.Add("^", Asm6502Operator.TopByte);
     }
 }
