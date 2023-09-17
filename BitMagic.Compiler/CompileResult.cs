@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -21,6 +22,7 @@ public class CompileResult
     }
 }
 
+[DebuggerDisplay("{FileName} in {SegmentName}")]
 public class NamedStream : MemoryStream
 {
     public string SegmentName { get; set; }
