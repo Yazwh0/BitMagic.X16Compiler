@@ -645,6 +645,7 @@ namespace BitMagic.Compiler
                 {
                     header = string.IsNullOrWhiteSpace(_project.OutputFile.Filename) || _project.OutputFile.Filename.EndsWith(".prg", StringComparison.OrdinalIgnoreCase);
                     thisFilename = $"{Path.GetFileNameWithoutExtension(_project.Code.Name).Replace(".generated", "")}.prg";
+                    segments.First().Filename = thisFilename;
                     isMain = true;
                 }
                 else
