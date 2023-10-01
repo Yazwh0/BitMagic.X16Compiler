@@ -167,4 +167,6 @@ public class CompileOptions
     public bool DisplaySegments { get; set; }
     public bool DisplayCode { get; set; }
     public bool DisplayData { get; set; }
+    public bool Rebuild { get; set; }
+    public string BinFolder { get; set; } = "";
 }
