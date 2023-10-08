@@ -109,13 +109,13 @@ namespace BitMagic.Compiler
 
                     if (dict.ContainsKey("address"))
                     {
-                        segment.Address = ParseStringToValue(dict["address"]);
+                        segment.Address = ParseStringToValue(dict["address"], () => new TextLine(source));
                         segment.StartAddress = segment.Address;
                     }
 
                     if (dict.ContainsKey("maxsize"))
                     {
-                        segment.MaxSize = ParseStringToValue(dict["maxsize"]);
+                        segment.MaxSize = ParseStringToValue(dict["maxsize"], () => new TextLine(source));
                     }
 
                     if (dict.ContainsKey("filename"))
@@ -351,7 +351,7 @@ namespace BitMagic.Compiler
                 }, new[] { "type", "name", "value" }, ' ')
                 .WithParameters(".org", (dict, state, source) =>
                 {
-                    var padto = ParseStringToValue(dict["address"]);
+                    var padto = ParseStringToValue(dict["address"], () => new TextLine(source));
                     if (padto < state.Segment.Address)
                         throw new Exception($"pad with destination of ${padto:X4}, but segment address is already ${state.Segment.Address:X4}");
 
@@ -359,7 +359,7 @@ namespace BitMagic.Compiler
                 }, new[] { "address" })
                 .WithParameters(".pad", (dict, state, source) =>
                 {
-                    var size = ParseStringToValue(dict["size"]);
+                    var size = ParseStringToValue(dict["size"], () => new TextLine(source));
 
                     state.Segment.Address += size;
                 }, new[] { "size" })
@@ -425,7 +425,7 @@ namespace BitMagic.Compiler
                 }, new[] { "type", "name" }, ' ')
                 .WithParameters(".align", (dict, state, source) =>
                 {
-                    var boundry = ParseStringToValue(dict["boundary"]);
+                    var boundry = ParseStringToValue(dict["boundary"], () => new TextLine(source));
 
                     if (boundry == 0)
                         return;
@@ -800,18 +800,24 @@ namespace BitMagic.Compiler
 
         private void ParseCommand(SourceFilePosition source, CompileState state) => _commandParser.Process(source, state);
 
-        private int ParseStringToValue(string inp)
+        private int ParseStringToValue(string inp, Func<IOutputData> getLine)
         {
-            if (inp.StartsWith('$'))
-                return Convert.ToInt32(inp[1..], 16);
+            try
+            {
+                if (inp.StartsWith('$'))
+                    return Convert.ToInt32(inp[1..], 16);
 
-            if (inp.StartsWith('%'))
-                return Convert.ToInt32(inp[1..], 2);
+                if (inp.StartsWith('%'))
+                    return Convert.ToInt32(inp[1..], 2);
 
-            if (int.TryParse(inp, out var result))
-                return result;
-
-            throw new Exception($"Cannot parse {inp} into an int");
+                if (int.TryParse(inp, out var result))
+                    return result;
+            }
+            catch(Exception e)
+            {
+                throw new CompilerStringParseException(getLine(), e.Message, inp);
+            }
+            throw new CompilerStringParseException(getLine(), $"Cannot parse {inp} into an int", inp);
         }
     }
 }
