@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 
 namespace BitMagic.Compiler;
 
@@ -81,8 +80,8 @@ internal class DataBlock : IOutputData
         }
     }
 
-    public void WriteToConsole()
+    public void WriteToConsole(IEmulatorLogger logger)
     {
-        Console.WriteLine($"${Address:X4}:\t{string.Join(", ", Data.Select(a => $"${a:X2}")),-22}");
+        logger.LogLine($"${Address:X4}:\t{string.Join(", ", Data.Select(a => $"${a:X2}")),-22}");
     }
 }

@@ -19,13 +19,15 @@ namespace BitMagic.Compiler
         private readonly Project _project;
         private readonly Dictionary<string, ICpuOpCode> _opCodes = new Dictionary<string, ICpuOpCode>();
         private readonly CommandParser _commandParser;
+        private readonly IEmulatorLogger _logger;
 
         private static Regex _variableType = new Regex("(?<typename>(?i:byte|sbyte|short|ushort|int|uint|long|ulong|string))(\\[(?<size>\\d+)\\])?", RegexOptions.Compiled);
 
-        public Compiler(Project project)
+        public Compiler(Project project, IEmulatorLogger logger)
         {
             _project = project;
             _commandParser = CreateParser();
+            _logger = logger;
         }
 
         public Compiler(string code)
@@ -344,7 +346,7 @@ namespace BitMagic.Compiler
 
                     state.Procedure.AddData(dataline);
                     if (_project.CompileOptions.DisplayData)
-                        dataline.WriteToConsole();
+                        dataline.WriteToConsole(_logger);
 
                 }, new[] { "type", "name", "value" }, ' ')
                 .WithParameters(".org", (dict, state, source) =>
@@ -455,7 +457,7 @@ namespace BitMagic.Compiler
 
                     state.Procedure.AddData(dataline);
                     if (_project.CompileOptions.DisplayData)
-                        dataline.WriteToConsole();
+                        dataline.WriteToConsole(_logger);
                 })
                 .WithLine(".word", (source, state) =>
                 {
@@ -465,7 +467,7 @@ namespace BitMagic.Compiler
 
                     state.Procedure.AddData(dataline);
                     if (_project.CompileOptions.DisplayData)
-                        dataline.WriteToConsole();
+                        dataline.WriteToConsole(_logger);
                 });
 
 
@@ -495,10 +497,10 @@ namespace BitMagic.Compiler
 
             if (_project.CompileOptions.DisplaySegments)
             {
-                Console.WriteLine("{0,-25} {1,-5} {2,-5} {3,-5}", "Segment", "Start", "Size", "End");
+                _logger.LogLine(string.Format("{0,-25} {1,-5} {2,-5} {3,-5}", "Segment", "Start", "Size", "End"));
                 foreach (var segment in state.Segments.Values)
                 {
-                    Console.WriteLine($"{segment.Name,-25} ${segment.StartAddress:X4} ${segment.Address - segment.StartAddress:X4} ${segment.Address:X4}");
+                    _logger.LogLine(string.Format($"{segment.Name,-25} ${segment.StartAddress:X4} ${segment.Address - segment.StartAddress:X4} ${segment.Address:X4}"));
                 }
             }
 
@@ -546,10 +548,10 @@ namespace BitMagic.Compiler
         {
             if (_project.CompileOptions.DisplayVariables)
             {
-                Console.WriteLine("Variables:");
+                _logger.LogLine("Variables:");
                 foreach (var (Name, Value) in globals.GetChildVariables(globals.Namespace))
                 {
-                    Console.WriteLine($"{Name} = ${Value:X2}");
+                    _logger.LogLine($"{Name} = ${Value:X2}");
                 }
             }
         }
@@ -740,7 +742,7 @@ namespace BitMagic.Compiler
 
         private void Reval(CompileState state)
         {
-            Console.WriteLine("Revaluations:");
+            _logger.LogLine("Revaluations:");
             state.Globals.MakeExplicit();
 
             foreach (var segment in state.Segments.Values)
@@ -757,7 +759,7 @@ namespace BitMagic.Compiler
             foreach (var line in proc.Data.Where(l => l.RequiresReval))
             {
                 line.ProcessParts(true);
-                line.WriteToConsole();
+                line.WriteToConsole(_logger);
 
                 if (line.RequiresReval)
                 {
@@ -790,7 +792,7 @@ namespace BitMagic.Compiler
             toAdd.ProcessParts(false);
 
             if (_project.CompileOptions.DisplayCode)
-                toAdd.WriteToConsole();
+                toAdd.WriteToConsole(_logger);
 
             state.Procedure.AddData(toAdd);
             state.Segment.Address += toAdd.Data.Length;

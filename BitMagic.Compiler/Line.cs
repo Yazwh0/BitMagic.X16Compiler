@@ -2,12 +2,8 @@
 using BitMagic.Compiler.CodingSeb;
 using BitMagic.Compiler.Exceptions;
 using CodingSeb.ExpressionEvaluator;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BitMagic.Compiler;
 
@@ -97,9 +93,9 @@ public class Line : IOutputData
         throw new CannotCompileException(this, $"Cannot compile line '{_original}'");
     }
 
-    public void WriteToConsole()
+    public void WriteToConsole(IEmulatorLogger logger)
     {
-        Console.Write($"${Address:X4}:{(RequiresReval ? "* " : "  ")}{string.Join(", ", Data.Select(a => $"${a:X2}")),-22}");
-        Console.WriteLine($"{_opCode.Code}\t{Params}");
+        logger.Log($"${Address:X4}:{(RequiresReval ? "* " : "  ")}{string.Join(", ", Data.Select(a => $"${a:X2}")),-22}");
+        logger.LogLine($"{_opCode.Code}\t{Params}");
     }
 }

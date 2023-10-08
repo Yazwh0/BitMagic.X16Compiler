@@ -97,9 +97,9 @@ namespace BitMagic.Compiler
             }
         }
 
-        public void WriteToConsole()
+        public void WriteToConsole(IEmulatorLogger logger)
         {
-            Console.WriteLine($"${Address:X4}:\t{string.Join(", ", Data.Select(a => $"${a:X2}")),-22}");
+            logger.LogLine($"${Address:X4}:\t{string.Join(", ", Data.Select(a => $"${a:X2}")),-22}");
         }
     }
 }
