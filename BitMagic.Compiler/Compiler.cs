@@ -30,11 +30,12 @@ namespace BitMagic.Compiler
             _logger = logger;
         }
 
-        public Compiler(string code)
+        public Compiler(string code, IEmulatorLogger logger)
         {
             _project = new Project();
             _project.Code = new StaticTextFile(code);
             _commandParser = CreateParser();
+            _logger = logger;
         }
 
         private CommandParser CreateParser() => CommandParser.Parser()
