@@ -122,7 +122,7 @@ public class ProjectTextFile : ISourceFile
 
 public class StaticTextFile : ISourceFile
 {
-    public string Name => "";
+    public string Name { get; private init; }
 
     public string Path => "";
 
@@ -140,9 +140,10 @@ public class StaticTextFile : ISourceFile
     public string GetContent() => _content;
     public ISourceFile? Parent => null;
 
-    public StaticTextFile(string content)
+    public StaticTextFile(string content, string name = "")
     {
         _content = content;
+        Name  = name;
     }
 }
 
