@@ -95,12 +95,12 @@ namespace BitMagic.Compiler
             if (_variables.TryGetValue(e.Name, _source, out var result))
             {
                 e.Value = result;
-                _requiresReval = false;
+                //_requiresReval |= false;
             }
             else
             {
                 RequiresRevalNames.Add(e.Name);
-                _requiresReval = true;
+                _requiresReval |= true;
 
                 // activate when we have preprocess constant collection
                 //e.Value = _size switch
