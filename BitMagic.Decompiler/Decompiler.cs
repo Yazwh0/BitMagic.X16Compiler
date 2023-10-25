@@ -192,38 +192,50 @@ public class Decompiler
     }
 }
 
-public class DecompileReturn : ISourceFile
+public class DecompileReturn : SourceFileBase
 {
-    public string Name { get; set; } = "";
-    public string Path { get; set; } = "";
-    public int? ReferenceId { get; set; } = null;
-    public SourceFileOrigin Origin { get; set; }
-    public bool Volatile { get; set; } = false;
-    public Action Generate { get; set; } = () => { };
     public int RamBank { get; set; }
     public int RomBank { get; set; }
 
-    public bool ActualFile => false;
-    public ISourceFile? Parent => null;
+//    public ISourceFile? Parent => null;
 
     public int LastAddress { get; set; }
     public Dictionary<int, DissasemblyItem> Items { get; set; } = new();
+    public Action? Generate { get; protected set; }
+
+    public override IReadOnlyList<ISourceFile> Parents { get; } = Array.Empty<ISourceFile>();
+    public override IReadOnlyList<string> Content { get; protected set; } = Array.Empty<string>();
+    public override IReadOnlyList<ParentSourceMapReference> ParentMap { get; } = Array.Empty<ParentSourceMapReference>();
+
+    public DecompileReturn()
+    {
+        ActualFile = false;
+        Origin = SourceFileType.Decompiled;
+    }
+
+    public void SetName(string name, string path)
+    {
+        Name = name;
+        Path = path;
+    }
+
+    public void SetGenerate(Action generate)
+    {
+        Generate = generate;
+    }
 
     public string GetContent()
     {
-        var sb = new StringBuilder();
+        UpdateContent();
+        return string.Join(Environment.NewLine, Content);
+    }
 
-        if (Volatile)
-        {
+    public override Task UpdateContent()
+    {
+        if (Generate != null)
             Generate();
-        }
 
-        foreach (var i in Items.Values)
-        {
-            sb.AppendLine(i.Instruction);
-        }
-
-        return sb.ToString();
+        return Task.CompletedTask;
     }
 }
 

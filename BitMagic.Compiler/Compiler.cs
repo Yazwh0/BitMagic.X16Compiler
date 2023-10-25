@@ -1,7 +1,6 @@
 ﻿using BitMagic.Common;
 using BitMagic.Cpu;
 using BitMagic.Machines;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +10,7 @@ using System.Threading.Tasks;
 using BitMagic.Compiler.Exceptions;
 using BitMagic.Compiler.Warnings;
 using System.Text.RegularExpressions;
+using BitMagic.Compiler.Files;
 
 namespace BitMagic.Compiler
 {
@@ -474,11 +474,7 @@ namespace BitMagic.Compiler
 
         public async Task<CompileResult> Compile()
         {
-            var contents = _project.Code.GetContent();
-
-            if (contents == null)
-                throw new Exception("Code contents is null");
-
+            var contents = _project.Code.Content;
 
             var globals = new Variables("App");
 
@@ -518,11 +514,12 @@ namespace BitMagic.Compiler
 
             DisplayVariables(globals);
 
-            if (!string.IsNullOrWhiteSpace(_project.AssemblerObject.Filename))
-            {
-                _project.AssemblerObject.Contents = JsonConvert.SerializeObject(state.Segments, Formatting.Indented);
-                await _project.AssemblerObject.Save();
-            }
+            // not sure what this does...
+            //if (!string.IsNullOrWhiteSpace(_project.AssemblerObject.Name))
+            //{
+            //    //_project.AssemblerObject.Contents = JsonConvert.SerializeObject(state.Segments, Formatting.Indented);
+            //    await _project.AssemblerObject.Save();
+            //}
 
             var result = await GenerateDataFiles(state);
 
@@ -557,11 +554,14 @@ namespace BitMagic.Compiler
             }
         }
 
-        private async Task CompileFile(string fileName, CompileState state, string? contents = null, SourceFilePosition? compileSource = null)
+        private async Task CompileFile(string fileName, CompileState state, IReadOnlyList<string>? lines = null, SourceFilePosition? compileSource = null)
         {
-            contents ??= (await LoadFile(fileName, state, compileSource));
+            if (lines == null)
+            {
+                var contents = (await LoadFile(fileName, state, compileSource));
 
-            var lines = contents.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.TrimEntries);
+                lines = contents.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.TrimEntries);
+            }
 
             var previousLines = new StringBuilder();
             int lineNumber = 0;
@@ -584,7 +584,7 @@ namespace BitMagic.Compiler
 
                 var idx = line.IndexOf(';');
 
-                var thisLine = (idx == -1 ? line : line[..idx]);
+                var thisLine = (idx == -1 ? line : line[..idx]).Trim();
 
                 if (thisLine.StartsWith('.'))
                 {

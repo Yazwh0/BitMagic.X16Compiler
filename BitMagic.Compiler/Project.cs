@@ -1,4 +1,5 @@
 ﻿using BitMagic.Common;
+using BitMagic.Compiler.Files;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -7,10 +8,8 @@ namespace BitMagic.Compiler;
 
 public class Project
 {
-    //public ProjectTextFile Source { get; } = new ProjectTextFile();
-    public ProjectTextFile PreProcess { get; } = new ProjectTextFile();
-    public ISourceFile Code { get; set; } = new ProjectTextFile();
-    public ProjectTextFile AssemblerObject { get; } = new ProjectTextFile();
+    //public BitMagicProjectFile PreProcess { get; } = new BitMagicProjectFile();
+    public SourceFileBase Code { get; set; } = new BitMagicProjectFile();
 
     public ProjectBinFile OutputFile { get; } = new ProjectBinFile();
     public ProjectBinFile RomFile { get; } = new ProjectBinFile();
@@ -19,7 +18,6 @@ public class Project
     public CompileOptions CompileOptions { get; set; } = new CompileOptions();
 
     public IMachine? Machine { get; set; }
-    //public IMachineEmulator? MachineEmulator => Machine as IMachineEmulator;
 
     public TimeSpan LoadTime { get; set; }
     public TimeSpan PreProcessTime { get; set; }
@@ -60,90 +58,6 @@ public class ProjectBinFile
             throw new ArgumentNullException(nameof(Contents));
 
         await File.WriteAllBytesAsync(Filename, Contents);
-    }
-}
-
-public class ProjectTextFile : ISourceFile
-{
-    public string? Filename { get; set; } = null;
-    public string? Contents { get; set; } = null;
-
-    public string Name => System.IO.Path.GetFileName(Filename);
-    public string Path => Filename;
-    public int? ReferenceId => null;
-    public SourceFileOrigin Origin => SourceFileOrigin.FileSystem;
-    public bool Volatile => false;
-    public Action Generate => () => { Load().GetAwaiter().GetResult(); };
-    public bool ActualFile => true;
-    public ISourceFile? Parent => null;
-
-    public ProjectTextFile()
-    {
-    }
-
-    public ProjectTextFile(string filename)
-    {
-        Filename = filename;
-    }
-
-    public string GetContent()
-    {
-        return Contents ?? "";
-    }
-
-    public Task Load(string filename)
-    {
-        Filename = System.IO.Path.GetFullPath(filename);
-        return Load();
-    }
-
-    public async Task Load()
-    {
-        if (string.IsNullOrWhiteSpace(Filename))
-            throw new ArgumentNullException(nameof(Filename));
-
-        Contents = await File.ReadAllTextAsync(Filename);
-    }
-
-    public Task Save(string filename)
-    {
-        Filename = filename;
-        return Save();
-    }
-
-    public async Task Save()
-    {
-        if (string.IsNullOrWhiteSpace(Filename))
-            throw new ArgumentNullException(nameof(Filename));
-
-        await File.WriteAllTextAsync(Filename, Contents);
-    }
-}
-
-public class StaticTextFile : ISourceFile
-{
-    public string Name { get; private init; }
-
-    public string Path => "";
-
-    public int? ReferenceId => null;
-
-    public SourceFileOrigin Origin => SourceFileOrigin.Static;
-
-    public bool Volatile => false;
-
-    public Action Generate => () => { };
-
-    public bool ActualFile => false;
-
-    private readonly string _content;
-    public string GetContent() => _content;
-    public ISourceFile? Parent => null;
-
-    public StaticTextFile(string content, string name = "")
-    {
-        _content = content;
-        Name  = name;
     }
 }
 
