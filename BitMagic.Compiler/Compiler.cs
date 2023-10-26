@@ -586,6 +586,12 @@ namespace BitMagic.Compiler
 
                 var thisLine = (idx == -1 ? line : line[..idx]).Trim();
 
+                if (string.IsNullOrWhiteSpace(thisLine))
+                {
+                    previousLines.AppendLine(line);
+                    continue;
+                }
+
                 if (thisLine.StartsWith('.'))
                 {
                     previousLines.Clear();
