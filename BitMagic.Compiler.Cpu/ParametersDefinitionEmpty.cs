@@ -4,6 +4,7 @@
     {
         internal override string GetParameter(string parameters) => parameters;
 
-        internal override bool Valid(string parameters) => string.IsNullOrWhiteSpace(parameters);
+        public override bool Valid(string parameters) => string.IsNullOrWhiteSpace(parameters);
+        public override bool HasTemplate => false;
     }
 }

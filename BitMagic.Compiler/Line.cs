@@ -68,6 +68,8 @@ public class Line : IOutputData
 
     public void ProcessParts(bool finalParse)
     {
+        //var allPossible = _cpu.ParameterDefinitions.Where(i => i.Value.Valid(Params) && i.Value.HasTemplate).OrderBy(i => i.Value.Order).ToList();
+
         foreach (var i in _opCode.Modes.Where(i => _cpu.ParameterDefinitions.ContainsKey(i)).Select(i => _cpu.ParameterDefinitions[i]).OrderBy(i => i.Order))
         {
             try

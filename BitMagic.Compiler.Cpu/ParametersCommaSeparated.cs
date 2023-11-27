@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -48,5 +49,23 @@ namespace BitMagic.Compiler.Cpu
         {
             throw new NotImplementedException();
         }
+
+        public bool Valid(string parameters)
+        {
+            if (string.IsNullOrWhiteSpace(parameters))
+                return false;
+
+            if (Left == null || Right == null)
+                return false;
+
+            var split = parameters.Split(',');
+
+            if (split.Length != 2)
+                return false;
+
+            return Left.Valid(split[0]) && Right.Valid(split[1]);
+        }
+
+        public bool HasTemplate => true;
     }
 }

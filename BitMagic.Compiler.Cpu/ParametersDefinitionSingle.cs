@@ -46,6 +46,8 @@ namespace BitMagic.Compiler.Cpu
         }
 
         internal abstract string GetParameter(string parameters);
-        internal abstract bool Valid(string parameters);
+        public abstract bool Valid(string parameters);
+
+        public abstract bool HasTemplate { get; }
     }
 }

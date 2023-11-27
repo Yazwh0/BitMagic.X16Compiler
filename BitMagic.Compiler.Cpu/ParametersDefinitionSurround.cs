@@ -11,7 +11,7 @@
         internal override string GetParameter(string parameters) =>
             parameters[StartsWith.Length..(parameters.Length - EndsWith.Length)];
 
-        internal override bool Valid(string parameters)
+        public override bool Valid(string parameters)
         {
             if (!(parameters.StartsWith(StartsWith, System.StringComparison.InvariantCultureIgnoreCase) &&
                 parameters.EndsWith(EndsWith, System.StringComparison.InvariantCultureIgnoreCase) &&
@@ -34,5 +34,7 @@
 
             return true;
         }
+
+        public override bool HasTemplate => true;
     }
 }
