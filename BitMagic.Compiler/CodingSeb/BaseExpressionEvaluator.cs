@@ -467,6 +467,8 @@ namespace CodingSeb.ExpressionEvaluator
             { "typeof", (self, args) => ((ClassOrEnumType)self.Evaluate(args[0])).Type },
         };
 
+        protected virtual string Stringify(object obj) => obj.ToString();
+
         #endregion
 
         #region Caching
@@ -3157,7 +3159,7 @@ namespace CodingSeb.ExpressionEvaluator
                             if (obj is BubbleExceptionContainer bubbleExceptionContainer)
                                 bubbleExceptionContainer.Throw();
 
-                            resultString.Append(obj);
+                            resultString.Append(Stringify(obj));
                         }
                     }
                     else if (expression.Substring(i, expression.Length - i)[0] == '}')

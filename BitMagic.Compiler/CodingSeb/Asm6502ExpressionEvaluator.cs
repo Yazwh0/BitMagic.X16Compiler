@@ -34,6 +34,16 @@ public class Asm6502ExpressionEvaluator : BaseExpressionEvaluator
         unaryOperatorsDictionary.Add(">", Asm6502Operator.HighByte);
         unaryOperatorsDictionary.Add("^", Asm6502Operator.TopByte);
     }
+
+    protected override string Stringify(object obj)
+    {
+        if (StringifyFunction != null)
+            return StringifyFunction(obj);
+
+        return base.Stringify(obj);
+    }
+
+    public Func<object, string> StringifyFunction { get; set; } = null;
 }
 
 internal class Asm6502Operator : ExpressionOperator

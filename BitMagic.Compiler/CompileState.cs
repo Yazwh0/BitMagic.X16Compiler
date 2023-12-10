@@ -15,9 +15,9 @@ public class CompileState
     [JsonProperty]
     internal Scope Scope { get; set; }
     [JsonProperty]
-    internal Procedure Procedure { get; set; }
+    public Procedure Procedure { get; internal set; }
     [JsonProperty]
-    internal Variables Globals { get; }
+    public Variables Globals { get; internal set; }
     [JsonProperty]
     internal int AnonCounter { get; set; }
     [JsonProperty]
@@ -25,7 +25,7 @@ public class CompileState
 
     [JsonProperty]
     public ScopeFactory ScopeFactory { get; set; }
-    internal IExpressionEvaluator Evaluator { get; set; }
+    public IExpressionEvaluator Evaluator { get; internal set; }
 
     internal readonly Queue<Scope> _scopeQueue = new Queue<Scope>();
 
