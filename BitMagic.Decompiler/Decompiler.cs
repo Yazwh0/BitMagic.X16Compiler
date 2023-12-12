@@ -197,7 +197,7 @@ public class DecompileReturn : SourceFileBase
     public int RamBank { get; set; }
     public int RomBank { get; set; }
 
-//    public ISourceFile? Parent => null;
+    //    public ISourceFile? Parent => null;
 
     public int LastAddress { get; set; }
     public Dictionary<int, DissasemblyItem> Items { get; set; } = new();
@@ -233,7 +233,15 @@ public class DecompileReturn : SourceFileBase
     public override Task UpdateContent()
     {
         if (Generate != null)
+        {
             Generate();
+
+            Content = Items.Select(i => i.Value.Instruction).ToArray();
+        }
+        else if (!Content.Any() && Items.Any())
+        {
+            Content = Items.Select(i => i.Value.Instruction).ToArray();
+        }
 
         return Task.CompletedTask;
     }
