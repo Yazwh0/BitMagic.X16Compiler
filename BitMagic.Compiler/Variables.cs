@@ -54,11 +54,11 @@ public class Variables : IVariables
     }
 
     // Goes up the variable tree looking for a perfect match.
-    public bool TryGetValue(string name, SourceFilePosition source, out int result)
+    public bool TryGetValue(string name, SourceFilePosition source, out IAsmVariable? result)
     {
         if (_variables.ContainsKey(name))
         {
-            result = _variables[name].Value;
+            result = _variables[name];
             return true;
         }
 
@@ -80,7 +80,7 @@ public class Variables : IVariables
             return _parent.TryGetValue(name, source, out result);
         }
 
-        var matches = new List<(string Name, int Value)>(1);
+        var matches = new List<(string Name, IAsmVariable Value)>(1);
 
         var prev = name;
         var regexname = name;
@@ -120,7 +120,7 @@ public class Variables : IVariables
         switch (matches.Count)
         {
             case 0:
-                result = 0;
+                result = default;
                 return false;
             case 1:
                 result = matches[0].Value;
@@ -130,11 +130,11 @@ public class Variables : IVariables
         }
     }
 
-    public IEnumerable<(string Name, int Value)> GetChildVariables(string prepend)
+    public IEnumerable<(string Name, IAsmVariable Value)> GetChildVariables(string prepend)
     {
         foreach (var kv in _variables)
         {
-            yield return ($"{prepend}:{kv.Key}", kv.Value.Value);
+            yield return ($"{prepend}:{kv.Key}", kv.Value);
         }
 
         foreach (var child in _children.Where(i => i != null))

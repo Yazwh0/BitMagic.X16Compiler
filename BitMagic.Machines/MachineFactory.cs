@@ -1,80 +1,75 @@
 ﻿using BitMagic.Common;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BitMagic.Machines
+namespace BitMagic.Machines;
+
+public enum Machine
 {
-    public enum Machine
+    NoMachine,
+    CommanderX16R38,
+    CommanderX16R39,
+    CommanderX16R40,
+    CommanderX16R41,
+    CommanderX16R42,
+    CommanderX16R43,
+    CommanderX16R44
+}
+
+public static class MachineFactory
+{
+    public static IMachine? GetMachine(string name)
     {
-        NoMachine,
-        CommanderX16R38,
-        CommanderX16R39,
-        CommanderX16R40,
-        CommanderX16R41,
-        CommanderX16R42,
-        CommanderX16R43,
-        CommanderX16R44
+        var machine = Enum.Parse<Machine>(name);
+        return GetMachine(machine);
     }
 
-    public static class MachineFactory
+    public static IMachine? GetMachine(Machine machine) => machine switch
     {
-        public static IMachine? GetMachine(string name)
-        {
-            var machine = Enum.Parse<Machine>(name);
-            return GetMachine(machine);
-        }
+        Machine.NoMachine => new NoMachine(),
+        Machine.CommanderX16R38 => new CommanderX16R38(),
+        Machine.CommanderX16R39 => new CommanderX16R39(),
+        Machine.CommanderX16R40 => new CommanderX16R39(),
+        Machine.CommanderX16R41 => new CommanderX16R39(),
+        Machine.CommanderX16R42 => new CommanderX16R39(),
+        Machine.CommanderX16R43 => new CommanderX16R39(),
+        Machine.CommanderX16R44 => new CommanderX16R39(),
+        _ => null
+    };
+}
 
-        public static IMachine? GetMachine(Machine machine) => machine switch
-        {
-            Machine.NoMachine => new NoMachine(),
-            Machine.CommanderX16R38 => new CommanderX16R38(),
-            Machine.CommanderX16R39 => new CommanderX16R39(),
-            Machine.CommanderX16R40 => new CommanderX16R39(),
-            Machine.CommanderX16R41 => new CommanderX16R39(),
-            Machine.CommanderX16R42 => new CommanderX16R39(),
-            Machine.CommanderX16R43 => new CommanderX16R39(),
-            Machine.CommanderX16R44 => new CommanderX16R39(),
-            _ => null
-        };
-    }
+public class NoMachine : IMachine
+{
+    public string Name => "NoMachine";
 
-    public class NoMachine : IMachine
+    public int Version => 0;
+
+    public ICpu Cpu { get; set; } = new NoCpu();
+    ICpu IMachine.Cpu => Cpu;
+
+    private IVariables _variables = new NoVariables();
+    IVariables IMachine.Variables => _variables;
+}
+
+public class NoCpu : ICpu
+{
+    public string Name => "NoCpu";
+
+    public IEnumerable<ICpuOpCode> OpCodes => Array.Empty<ICpuOpCode>();
+
+    public IReadOnlyDictionary<AccessMode, IParametersDefinition> ParameterDefinitions => throw new NotImplementedException();
+
+    public int OpCodeBytes => 1;
+}
+
+internal class NoVariables : IVariables
+{
+    public IReadOnlyDictionary<string, IAsmVariable> Values => new Dictionary<string, IAsmVariable>();
+    public IList<IAsmVariable> AmbiguousVariables => Array.Empty<IAsmVariable>();
+
+    public bool TryGetValue(string name, SourceFilePosition source, out IAsmVariable? result)
     {
-        public string Name => "NoMachine";
-
-        public int Version => 0;
-
-        public ICpu Cpu { get; set; } = new NoCpu();
-        ICpu IMachine.Cpu => Cpu;
-
-        private IVariables _variables = new NoVariables();
-        IVariables IMachine.Variables => _variables;
+        result = default;
+        return false;
     }
-
-    public class NoCpu : ICpu
-    {
-        public string Name => "NoCpu";
-
-        public IEnumerable<ICpuOpCode> OpCodes => Array.Empty<ICpuOpCode>();
-
-        public IReadOnlyDictionary<AccessMode, IParametersDefinition> ParameterDefinitions => throw new NotImplementedException();
-
-        public int OpCodeBytes => 1;
-    }
-
-    internal class NoVariables : IVariables
-    {
-        public IReadOnlyDictionary<string, IAsmVariable> Values => new Dictionary<string, IAsmVariable>();
-        public IList<IAsmVariable> AmbiguousVariables => Array.Empty<IAsmVariable>();
-
-        public bool TryGetValue(string name, SourceFilePosition source, out int result)
-        {
-            result = 0;
-            return false;
-        }
-    }
-
 }

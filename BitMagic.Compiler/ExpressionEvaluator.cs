@@ -24,6 +24,8 @@ namespace BitMagic.Compiler
             _state = state;
         }
 
+        public IVariables? Variables => _variables;
+
         // not thread safe!!!
         public (int Result, bool RequiresRecalc) Evaluate(string expression, SourceFilePosition source, IVariables variables, int address, bool final)
         {
@@ -94,7 +96,7 @@ namespace BitMagic.Compiler
 
             if (_variables.TryGetValue(e.Name, _source, out var result))
             {
-                e.Value = result;
+                e.Value = result.Value;
                 //_requiresReval |= false;
             }
             else

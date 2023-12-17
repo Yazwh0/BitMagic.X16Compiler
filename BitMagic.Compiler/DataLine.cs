@@ -62,17 +62,17 @@ namespace BitMagic.Compiler
             foreach (var r in result) 
             {
                 var i = r as int?;
-                
+
                 if (i == null)
                     throw new Exception($"Expected int? value back, actually have {r.GetType().Name} for {r}");
 
                 if (_lineType == LineType.IsByte)
                 {
-                    data.Add((byte)(i & 0xff));
+                    data.Add((byte)(i.Value & 0xff));
                 } 
                 else
                 {
-                    var us = (ushort)i;
+                    var us = (ushort)i.Value;
 
                     data.Add((byte)(us & 0xff));
                     data.Add((byte)((us & 0xff00) >> 8));
@@ -86,7 +86,7 @@ namespace BitMagic.Compiler
         {
             if (_procedure.Variables.TryGetValue(e.Name, Source, out var result))
             {
-                e.Value = result;
+                e.Value = result.Value;
                 RequiresReval = false;
             }
             else
