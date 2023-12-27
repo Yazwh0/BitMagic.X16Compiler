@@ -12,7 +12,7 @@ public class Line : IOutputData
     public readonly static Asm6502ExpressionEvaluator _evaluator = new();
 
     public byte[] Data { get; internal set; } = new byte[] { };
-    private ICpuOpCode _opCode;
+    private readonly ICpuOpCode _opCode;
     public bool RequiresReval { get; internal set; }
     public List<string> RequiresRevalNames { get; } = new List<string>();
     public Procedure Procedure { get; }
@@ -23,7 +23,7 @@ public class Line : IOutputData
     public int Address { get; }
 
     private readonly ICpu _cpu;
-    private readonly IExpressionEvaluator _expressionEvaluator;           
+    private readonly IExpressionEvaluator _expressionEvaluator;
 
     internal Line(ICpuOpCode opCode, SourceFilePosition source, Procedure proc, ICpu cpu, IExpressionEvaluator expressionEvaluator, int address, string[] parts)
     {
