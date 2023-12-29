@@ -134,10 +134,19 @@ namespace BitMagic.Compiler
                     }
 
                     state.Segment = segment;
-                    state.Scope = state.ScopeFactory.GetScope($"Main");
+
+                    var scopeName = "MAIN";
+
+                    if (dict.ContainsKey("scope"))
+                        scopeName = dict["scope"];
+
+                    if (string.IsNullOrWhiteSpace(scopeName))
+                        scopeName = "MAIN";
+
+                    state.Scope = state.ScopeFactory.GetScope(scopeName);
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
 
-                }, new[] { "name", "address", "maxsize" , "filename" }, ' ')
+                }, new[] { "name", "address", "maxsize" , "filename", "scope" }, ' ')
                 .WithParameters(".endsegment", (dict, state, source) =>
                 {
                     state.Segment = state.Segments["Main"];
