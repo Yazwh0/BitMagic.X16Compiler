@@ -11,6 +11,7 @@ using BitMagic.Compiler.Exceptions;
 using BitMagic.Compiler.Warnings;
 using System.Text.RegularExpressions;
 using BitMagic.Compiler.Files;
+using System.Xml.Linq;
 
 namespace BitMagic.Compiler
 {
@@ -145,28 +146,25 @@ namespace BitMagic.Compiler
 
                     state.Scope = state.ScopeFactory.GetScope(scopeName);
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
-
                 }, new[] { "name", "address", "maxsize" , "filename", "scope" }, ' ')
                 .WithParameters(".endsegment", (dict, state, source) =>
                 {
                     state.Segment = state.Segments["Main"];
-                    state.Scope = state.ScopeFactory.GetScope($"Main");
+                    state.Scope = state.ScopeFactory.GetScope("Main");
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
                 })
                 .WithParameters(".scope", (dict, state, source) =>
                 {
-
                     string name = dict.ContainsKey("name") ? dict["name"] : $"Scope_{state.AnonCounter}";
                     state.Scope = state.ScopeFactory.GetScope(name);
 
-                    state.Procedure = state.Procedure.GetProcedure($"{name}_Proc", state.Segment.Address, state.Scope);
+                    state.Procedure = state.Segment.GetDefaultProcedure(state.Scope); // state.Procedure.GetProcedure($"{name}_Proc", state.Segment.Address, state.Scope);
                     state.AnonCounter++;
 
                 }, new[] { "name" })
                 .WithParameters(".endscope", (dict, state, source) =>
                 {
-
-                    if (state.Procedure.Name.Replace("_Proc", "") != state.Scope.Name || !state.Procedure.Anonymous)
+                    if (!state.Procedure.Anonymous)
                     {
                         state.Warnings.Add(new UnmatchedEndProcWarning(source));
                     }
@@ -175,7 +173,6 @@ namespace BitMagic.Compiler
                     if (proc == null)
                     {
                         proc = state.Segment.GetDefaultProcedure(state.Scope);
-                        state.Warnings.Add(new UnmatchedEndProcWarning(source));
                     }
 
                     state.Scope = proc.Scope;
@@ -184,7 +181,6 @@ namespace BitMagic.Compiler
                 })
                 .WithParameters(".proc", (dict, state, source) =>
                 {
-
                     var name = dict.ContainsKey("name") ? dict["name"] : $"UnnamedProc_{state.AnonCounter++}";
 
                     state.Procedure = state.Procedure.GetProcedure(name, state.Segment.Address);
@@ -192,7 +188,6 @@ namespace BitMagic.Compiler
                 }, new[] { "name" })
                 .WithParameters(".endproc", (dict, state, source) =>
                 {
-
                     if (!state.Procedure.Variables.HasValue("endproc"))
                         state.Procedure.Variables.SetValue("endproc", state.Segment.Address, VariableType.ProcEnd);
 

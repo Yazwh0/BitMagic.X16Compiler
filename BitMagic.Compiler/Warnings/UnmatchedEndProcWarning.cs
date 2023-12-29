@@ -11,7 +11,7 @@ namespace BitMagic.Compiler.Warnings
             LineNumber = source.LineNumber;
             FileName = source.Name;
         }
-        public override string ToString() => $"Unmateched endproc on line {LineNumber} in file '{FileName}'.";
+        public override string ToString() => $"Unmatched endproc on line {LineNumber} in file '{FileName}'.";
     }
 
     public class EndProcOnAnonymousWarning : CompilerWarning

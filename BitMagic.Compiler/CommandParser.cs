@@ -102,6 +102,9 @@ namespace BitMagic.Compiler
                 if (thisArgs[argsPos].StartsWith(';'))
                     break;
 
+                if (thisArgs[argsPos].EndsWith(','))
+                    thisArgs[argsPos] = thisArgs[argsPos][..^1].Trim();
+
                 var idx = thisArgs[argsPos].IndexOf('=');
 
                 if (idx == -1)
