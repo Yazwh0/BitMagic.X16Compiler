@@ -1,5 +1,6 @@
 ﻿using BitMagic.Common;
 using BitMagic.Compiler.CodingSeb;
+using BitMagic.Compiler.Exceptions;
 using CodingSeb.ExpressionEvaluator;
 using System;
 using System.Collections.Generic;
@@ -53,7 +54,7 @@ namespace BitMagic.Compiler
                     }
 
                     if (direction == 0)
-                        throw new Exception($"Parsing relative label in expression {expression} rendered no direction");
+                        throw new RelativeLabelException(source, $"Parsing relative label in expression {expression} rendered no direction");
 
                     if (variables.Values.ContainsKey(label))
                     {
@@ -62,10 +63,10 @@ namespace BitMagic.Compiler
                         if (l.Value > address && direction == 1)
                             return (l.Value, false);
 
-                        if (l.Value < address && direction == -1)
+                        if (l.Value <= address && direction == -1)
                             return (l.Value, false);
 
-                        throw new Exception($"Searching for relative label {label}, with a count of {direction}, but no label found");
+                        throw new RelativeLabelException(source, $"Searching for relative label {label}, with a count of {direction}, but no label found");
                     }
 
                     var labels = direction > 0 ?
