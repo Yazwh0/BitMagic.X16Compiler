@@ -34,7 +34,7 @@ namespace BitMagic.Compiler
         {
             var data = new List<byte>();
 
-            var toProcess = Source.Source.Trim().ToLower();
+            var toProcess = Source.Source.Trim();//.ToLower();
 
             var idx = toProcess.IndexOf(';');
             if (idx != -1)

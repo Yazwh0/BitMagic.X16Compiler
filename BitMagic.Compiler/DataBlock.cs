@@ -37,6 +37,7 @@ internal class DataBlock : IOutputData
             VariableType.Long => 8,
             VariableType.Ulong => 8,
             VariableType.FixedStrings => 1,
+            VariableType.ProcStart => 2,
             _ => throw new Exception($"Unhandled type {type}")
         };
         _expression = expression;

@@ -22,7 +22,7 @@ namespace BitMagic.Compiler
         private readonly CommandParser _commandParser;
         private readonly IEmulatorLogger _logger;
 
-        private static Regex _variableType = new Regex("(?<typename>(?i:byte|sbyte|short|ushort|int|uint|long|ulong|string))(\\[(?<size>\\d+)\\])?", RegexOptions.Compiled);
+        private static Regex _variableType = new Regex("(?<typename>(?i:byte|sbyte|short|ushort|int|uint|long|ulong|string|proc))(\\[(?<size>\\d+)\\])?", RegexOptions.Compiled);
 
         public Compiler(Project project, IEmulatorLogger logger)
         {
@@ -278,6 +278,7 @@ namespace BitMagic.Compiler
                         "uint" => VariableType.Uint,
                         "long" => VariableType.Long,
                         "ulong" => VariableType.Ulong,
+                        "proc" => VariableType.ProcStart,
                         "string" => size == 0 ? VariableType.String : VariableType.FixedStrings,
                         _ => throw new Exception($"Unhandled type {typename}")
                     };
@@ -286,8 +287,8 @@ namespace BitMagic.Compiler
 
                     var (address, requiresReval) = state.Evaluator.Evaluate(value, source, state.Procedure.Variables, -1, false);
 
-                    if (requiresReval)
-                        throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
+                    //if (requiresReval)
+                    //    throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
 
                     state.Procedure.Variables.SetValue(name, address, variableType, size, isArray);
 
@@ -340,6 +341,7 @@ namespace BitMagic.Compiler
                         "long" => VariableType.Long,
                         "ulong" => VariableType.Ulong,
                         "string" => VariableType.FixedStrings,
+                        "proc" => VariableType.ProcStart,
                         _ => throw new Exception($"Unhandled type {typename}")
                     };
                     state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, size, isArray);
