@@ -146,9 +146,13 @@ public class Variables : IVariables
         }
     }
 
-    public void SetValue(string name, int value, VariableType variableType, int length = 0, bool array = false)
+    public void SetValue(string name, int value, VariableType variableType, bool requiresReval, int length = 0, bool array = false, 
+        Func<bool, (int Value, bool RequiresReval)>? evaluate = null)
     {
-        var toAdd = new AsmVariable { Name = name, Value = value, VariableType = variableType, Length = length, Array = array };
+        var toAdd = new AsmVariable { Name = name, Value = value, VariableType = variableType, Length = length, Array = array, RequiresReval = requiresReval};
+        if (evaluate != null)
+            toAdd.Evaluate = evaluate;
+
         if (variableType == VariableType.LabelPointer) // consider all labels to be ambiguous when creating
         {
             _ambiguousVariables.Add(toAdd);

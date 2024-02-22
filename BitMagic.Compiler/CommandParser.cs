@@ -23,9 +23,15 @@ internal class CommandParser
         return new CommandParser();
     }
 
-    public CommandParser WithParameters(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames = null, char seperator = ',')
+    public CommandParser WithParameters(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames = null)
     {
-        _lineProcessor.Add(verb, (p, s, r) => ProcesParameters(r ,p, s, action, defaultNames, seperator));
+        _lineProcessor.Add(verb, (p, s, r) => ProcesParameters(r, p, s, action, defaultNames));
+        return this;
+    }
+
+    public CommandParser WithAssignment(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, bool hasType)
+    {
+        _lineProcessor.Add(verb, (p, s, r) => ProcessAssignment(r, p, s, action, hasType));
         return this;
     }
 
@@ -73,7 +79,76 @@ internal class CommandParser
         map(source, state, toProcess);
     }
 
-    private static void ProcesParameters(string rawParams, SourceFilePosition source, CompileState state, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames, char seperator)
+    /// <summary>
+    /// An assignment or definition of a variable, eg
+    /// name type [=] value
+    /// .const foo $100
+    /// .const foo = $100
+    /// .const byte foo $100
+    /// .const byte foo = CODE + 10
+    /// .const byte foo CODE + 10
+    /// </summary>
+    /// <param name="rawParams"></param>
+    /// <param name="source"></param>
+    /// <param name="state"></param>
+    /// <param name="action"></param>
+    private static void ProcessAssignment(string rawParams, SourceFilePosition source, CompileState state, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, bool hasType)
+    {
+        var idx = rawParams.IndexOf(";");
+        if (idx != -1)
+            rawParams = rawParams[..idx];
+
+        idx = rawParams.IndexOf("//");
+        if (idx != -1)
+            rawParams = rawParams[..idx];
+
+        rawParams = rawParams.Trim();
+
+        idx = rawParams.IndexOf(' ');
+
+        var paramDict = new Dictionary<string, string>();
+
+        if (hasType)
+        {
+            paramDict.Add("type", rawParams[..idx].Trim());
+            rawParams = rawParams[idx..].Trim();
+            idx = rawParams.IndexOf(' ');
+        }
+
+        if (idx == -1)
+        {
+            paramDict.Add("name", rawParams.Trim());
+            action(paramDict, state, source);
+            return;
+        }
+
+        paramDict.Add("name", rawParams[..idx]);
+        rawParams = rawParams[idx..].Trim();
+
+        if (rawParams.StartsWith("="))
+            rawParams = rawParams.Substring(1).Trim();
+
+        paramDict.Add("value", rawParams);
+
+        action(paramDict, state, source);
+    }
+
+
+    /// <summary>
+    /// Processes a verb which has standard parameter values, eg
+    /// .segment main $100 $200
+    /// .segment main, $100, $200
+    /// .segment main $100 $200 filename=main.bin
+    /// .segment main, $100, $200, filename = main.bin
+    /// .segment main $100 _ main.bin
+    /// </summary>
+    /// <param name="rawParams"></param>
+    /// <param name="source"></param>
+    /// <param name="state"></param>
+    /// <param name="action"></param>
+    /// <param name="defaultNames"></param>
+    /// <exception cref="CompilerCannotParseVerbParameters"></exception>
+    private static void ProcesParameters(string rawParams, SourceFilePosition source, CompileState state, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames)
     {
         var parameters = new Dictionary<string, string>();
 
@@ -85,7 +160,9 @@ internal class CommandParser
 
         var defaultPos = 0;
 
-        var thisArgs = 
+        var seperator = rawParams.Contains(',') ? ',' : ' ';
+
+        var thisArgs =
             rawParams.Split('"')
                      .Select((element, index) => index % 2 == 0  // If even index
                                        ? element.Split(seperator, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)  // Split the item
@@ -100,21 +177,30 @@ internal class CommandParser
             if (thisArgs[argsPos].StartsWith(';'))
                 break;
 
+            if (thisArgs[argsPos].StartsWith("//"))
+                break;
+
             if (thisArgs[argsPos].EndsWith(','))
                 thisArgs[argsPos] = thisArgs[argsPos][..^1].Trim();
 
-            var idx = thisArgs[argsPos].IndexOf('=');
+            var idx = thisArgs[argsPos].IndexOf(':');
+
+            if (idx == -1)
+                idx = thisArgs[argsPos].IndexOf('=');
 
             if (idx == -1)
             {
                 if (defaultNames == null || defaultPos >= defaultNames.Count)
-                    throw new CompilerCannotParseVerbParameters(source, $"Unknown parameter {thisArgs[argsPos]} at {source.ToString()}");
+                    throw new CompilerCannotParseVerbParameters(source, $"Unknown parameter {thisArgs[argsPos]} at {source}");
 
                 parameters.Add(defaultNames[defaultPos++], thisArgs[argsPos]);
                 continue;
             }
 
-            parameters.Add(thisArgs[argsPos][..idx].Trim(), thisArgs[argsPos][(idx+1)..].Trim());
+            var value = thisArgs[argsPos][(idx + 1)..].Trim();
+
+            if (value != "_")
+                parameters.Add(thisArgs[argsPos][..idx].Trim(), value);
         }
 
         action(parameters, state, source);

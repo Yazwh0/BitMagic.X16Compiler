@@ -11,7 +11,6 @@ using BitMagic.Compiler.Exceptions;
 using BitMagic.Compiler.Warnings;
 using System.Text.RegularExpressions;
 using BitMagic.Compiler.Files;
-using System.Xml.Linq;
 
 namespace BitMagic.Compiler
 {
@@ -45,7 +44,7 @@ namespace BitMagic.Compiler
                     if (label == ".:")
                         throw new Exception("Labels require a name. .: is not valid.");
 
-                    state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableType.LabelPointer);
+                    state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableType.LabelPointer, false);
                 })
                 //.WithParameters(".scopedelimiter",  (dict, state, source) =>
                 //{
@@ -146,7 +145,7 @@ namespace BitMagic.Compiler
 
                     state.Scope = state.ScopeFactory.GetScope(scopeName);
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
-                }, new[] { "name", "address", "maxsize" , "filename", "scope" }, ' ')
+                }, new[] { "name", "address", "maxsize" , "filename", "scope" })
                 .WithParameters(".endsegment", (dict, state, source) =>
                 {
                     state.Segment = state.Segments["Main"];
@@ -189,7 +188,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".endproc", (dict, state, source) =>
                 {
                     if (!state.Procedure.Variables.HasValue("endproc"))
-                        state.Procedure.Variables.SetValue("endproc", state.Segment.Address, VariableType.ProcEnd);
+                        state.Procedure.Variables.SetValue("endproc", state.Segment.Address, VariableType.ProcEnd, false);
 
                     if (state.Procedure.Anonymous)
                         state.Warnings.Add(new EndProcOnAnonymousWarning(source));
@@ -204,34 +203,41 @@ namespace BitMagic.Compiler
                     state.Scope = proc.Scope;
                     state.Procedure = proc;
                 })
-                .WithParameters(".const", (dict, state, source) =>
+                .WithAssignment(".const", (dict, state, source) =>
                 {
+                    var variables = state.Procedure.Variables;
+                    var src = source;
+
                     if (dict.ContainsKey("name") && dict.ContainsKey("value"))
                     {
                         var value = dict["value"];
 
-                        var (address, requiresReval) = state.Evaluator.Evaluate(value, source, state.Procedure.Variables, -1, false);
+                        var eval = (bool final) => state.Evaluator.Evaluate(value, src, variables, -1, final);
 
-                        if (requiresReval)
-                            throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
+                        var (address, requiresReval) = eval(false);
+
+                        //if (requiresReval)
+                        //    throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
 
 
-                        state.Procedure.Variables.SetValue(dict["name"], address, VariableType.Constant);
+                        state.Procedure.Variables.SetValue(dict["name"], address, VariableType.Constant, requiresReval, evaluate: eval);
                         return;
                     }
 
                     foreach (var kv in dict)
                     {
-                        var (address, requiresReval) = state.Evaluator.Evaluate(kv.Value, source, state.Procedure.Variables, -1, false);
+                        var eval = (bool final) => state.Evaluator.Evaluate(kv.Value, src, variables, -1, final);
 
-                        if (requiresReval)
-                            throw new Exception($"Cannot parse '{kv.Value}' into a value, constants cannot reference unprocessed variables.");
+                        var (address, requiresReval) = eval(false);
+
+                        //if (requiresReval)
+                        //    throw new Exception($"Cannot parse '{kv.Value}' into a value, constants cannot reference unprocessed variables.");
 
 
-                        state.Procedure.Variables.SetValue(kv.Key, address, VariableType.Constant);
+                        state.Procedure.Variables.SetValue(kv.Key, address, VariableType.Constant, requiresReval, evaluate: eval);
                     }
-                }, new[] { "name", "value" }, ' ')
-                .WithParameters(".constvar", (dict, state, source) =>
+                }, false)
+                .WithAssignment(".constvar", (dict, state, source) =>
                 {
                     if (!dict.ContainsKey("type"))
                         throw new Exception("Missing type");
@@ -285,15 +291,20 @@ namespace BitMagic.Compiler
 
                     size = size == 0 ? 1 : size;
 
-                    var (address, requiresReval) = state.Evaluator.Evaluate(value, source, state.Procedure.Variables, -1, false);
+                    var variables = state.Procedure.Variables;
+                    var src = source;
+
+                    var eval = (bool final) => state.Evaluator.Evaluate(value, src, variables, -1, final);
+
+                    var (address, requiresReval) = eval(false);
 
                     //if (requiresReval)
                     //    throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
 
-                    state.Procedure.Variables.SetValue(name, address, variableType, size, isArray);
+                    state.Procedure.Variables.SetValue(name, address, variableType, requiresReval, size, isArray, evaluate: eval);
 
-                }, new[] { "type", "name", "value" }, ' ')
-                .WithParameters(".var", (dict, state, source) =>
+                }, true)
+                .WithAssignment(".var", (dict, state, source) =>
                 {
                     if (!dict.ContainsKey("type"))
                         throw new Exception("Missing type");
@@ -344,7 +355,7 @@ namespace BitMagic.Compiler
                         "proc" => VariableType.ProcStart,
                         _ => throw new Exception($"Unhandled type {typename}")
                     };
-                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, size, isArray);
+                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray);
 
                     // construct the data
                     var dataline = new DataBlock(state.Segment.Address, source, size, variableType, value, state.Procedure, state.Evaluator);
@@ -355,7 +366,7 @@ namespace BitMagic.Compiler
                     if (_project.CompileOptions.DisplayData)
                         dataline.WriteToConsole(_logger);
 
-                }, new[] { "type", "name", "value" }, ' ')
+                }, true)
                 .WithParameters(".org", (dict, state, source) =>
                 {
                     var padto = ParseStringToValue(dict["address"], () => new TextLine(source));
@@ -370,7 +381,7 @@ namespace BitMagic.Compiler
 
                     state.Segment.Address += size;
                 }, new[] { "size" })
-                .WithParameters(".padvar", (dict, state, source) =>
+                .WithAssignment(".padvar", (dict, state, source) =>
                 {
                     if (!dict.ContainsKey("type"))
                         throw new Exception("Missing type");
@@ -409,10 +420,11 @@ namespace BitMagic.Compiler
                         "long" => VariableType.Long,
                         "ulong" => VariableType.Ulong,
                         "string" => VariableType.FixedStrings,
+                        "proc" => VariableType.ProcStart,
                         _ => throw new Exception($"Unhandled type {typename}")
                     };
 
-                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, size, isArray);
+                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray);
 
                     var length = variableType switch
                     {
@@ -425,11 +437,12 @@ namespace BitMagic.Compiler
                         VariableType.Long => 8,
                         VariableType.Ulong => 8,
                         VariableType.FixedStrings => 1,
+                        VariableType.ProcStart => 2,
                         _ => throw new Exception($"Unhandled type {variableType}")
                     };
 
                     state.Segment.Address += size * length;
-                }, new[] { "type", "name" }, ' ')
+                }, true)
                 .WithParameters(".align", (dict, state, source) =>
                 {
                     var boundry = ParseStringToValue(dict["boundary"], () => new TextLine(source));
@@ -442,20 +455,20 @@ namespace BitMagic.Compiler
                         state.Segment.Address++;
                     }
                 }, new[] { "boundary" })
-                .WithParameters(".insertfile", (dict, state, source) =>
-                {
-                    var t = CompileFile(dict["filename"], state, null, source);
+                //.WithParameters(".insertfile", (dict, state, source) =>
+                //{
+                //    var t = CompileFile(dict["filename"], state, null, source);
 
-                    try
-                    {
-                        t.Wait();
-                    }
-                    catch (Exception e)
-                    {
-                        throw e.InnerException ?? e;
-                    }
+                //    try
+                //    {
+                //        t.Wait();
+                //    }
+                //    catch (Exception e)
+                //    {
+                //        throw e.InnerException ?? e;
+                //    }
 
-                }, new[] { "filename" })
+                //}, new[] { "filename" })
                 .WithLine(".byte", (source, state) =>
                 {
                     var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte);
@@ -490,7 +503,20 @@ namespace BitMagic.Compiler
 
             try
             {
-                Reval(state);
+                var revalCount = int.MaxValue;
+
+                while (true)
+                {
+                    var thisReval = Reval(state, false, false);
+
+                    if (thisReval == 0)
+                        break;
+
+                    if (thisReval == revalCount)
+                        Reval(state, true, true);
+
+                    revalCount = thisReval;
+                }
             }
             catch
             {
@@ -544,7 +570,7 @@ namespace BitMagic.Compiler
 
             foreach (var kv in _project.Machine.Variables.Values)
             {
-                state.Globals.SetValue(kv.Key, kv.Value.Value, kv.Value.VariableType, kv.Value.Length, kv.Value.Array);
+                state.Globals.SetValue(kv.Key, kv.Value.Value, kv.Value.VariableType, false, kv.Value.Length, kv.Value.Array);
             }
         }
 
@@ -555,7 +581,7 @@ namespace BitMagic.Compiler
                 _logger.LogLine("Variables:");
                 foreach (var (Name, Value) in globals.GetChildVariables(globals.Namespace))
                 {
-                    _logger.LogLine($"{Name} = ${Value:X2}");
+                    _logger.LogLine($"{Name} = ${Value.Value:X2}");
                 }
             }
         }
@@ -753,28 +779,55 @@ namespace BitMagic.Compiler
             }
         }
 
-        private void Reval(CompileState state)
+        private int Reval(CompileState state, bool showRevaluations, bool throwOnReval)
         {
-            _logger.LogLine("Revaluations:");
+            var toReturn = 0;
+
+            if (showRevaluations)
+                _logger.LogLine("Revaluations:");
+
             state.Globals.MakeExplicit();
+
+            foreach(var (_, i) in state.Globals.GetChildVariables(""))
+            {
+                if (!i.RequiresReval)
+                    continue;
+
+                var variable = i as AsmVariable;
+
+                var r = variable.Evaluate(true);
+
+                if (r.RequiresReval && throwOnReval)
+                    throw new UnknownConstantException($"Cannot compile constant {i.Name}");
+                else if (r.RequiresReval)
+                    toReturn++;
+                else
+                    variable.Value = r.Value;
+            }
 
             foreach (var segment in state.Segments.Values)
             {
                 foreach (var proc in segment.DefaultProcedure.Values)
                 {
-                    RevalProc(proc);
+                    toReturn += RevalProc(proc, showRevaluations, throwOnReval);
                 }
             }
+
+            return toReturn;
         }
 
-        private void RevalProc(Procedure proc)
+        private int RevalProc(Procedure proc, bool showRevaluations, bool throwOnReval)
         {
+            var toReturn = 0;
+
             foreach (var line in proc.Data.Where(l => l.RequiresReval))
             {
                 line.ProcessParts(true);
-                line.WriteToConsole(_logger);
 
-                if (line.RequiresReval)
+                if (showRevaluations)
+                    line.WriteToConsole(_logger);
+
+                if (line.RequiresReval && throwOnReval)
                 {
                     throw new UnknownSymbolException(line, $"Unknown name {string.Join(", ", line.RequiresRevalNames.Select(i => $"'{i}'"))}");
                 }
@@ -782,8 +835,10 @@ namespace BitMagic.Compiler
 
             foreach (var p in proc.Procedures)
             {
-                RevalProc(p);
+                toReturn += RevalProc(p, showRevaluations, throwOnReval);
             }
+
+            return toReturn;
         }
 
         private void ParseAsm(string[] parts, SourceFilePosition source, CompileState state)

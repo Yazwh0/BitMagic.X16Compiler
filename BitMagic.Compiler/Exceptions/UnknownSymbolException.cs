@@ -9,3 +9,11 @@ public class UnknownSymbolException : CompilerLineException
     {
     }
 }
+
+public class UnknownConstantException : CompilerException
+{
+    public UnknownConstantException(string message) : base(message)
+    { }
+
+    public override string ErrorDetail => base.Message;
+}
