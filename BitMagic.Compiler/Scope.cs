@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using BitMagic.Common;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 
 namespace BitMagic.Compiler;
@@ -24,12 +25,13 @@ public class ScopeFactory
     public Variables GlobalVariables => _global;
 }
 
-public class Scope
+public class Scope : IScope
 {
     [JsonProperty]
     public string Name { get; }
     [JsonProperty]
     public Variables Variables { get; }
+    IVariables IScope.Variables => Variables;
 
     internal Scope(string name, Variables globals)
     {

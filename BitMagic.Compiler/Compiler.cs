@@ -11,6 +11,7 @@ using BitMagic.Compiler.Exceptions;
 using BitMagic.Compiler.Warnings;
 using System.Text.RegularExpressions;
 using BitMagic.Compiler.Files;
+using System.Xml;
 
 namespace BitMagic.Compiler
 {
@@ -145,7 +146,7 @@ namespace BitMagic.Compiler
 
                     state.Scope = state.ScopeFactory.GetScope(scopeName);
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
-                }, new[] { "name", "address", "maxsize" , "filename", "scope" })
+                }, new[] { "name", "address", "maxsize", "filename", "scope" })
                 .WithParameters(".endsegment", (dict, state, source) =>
                 {
                     state.Segment = state.Segments["Main"];
@@ -358,7 +359,7 @@ namespace BitMagic.Compiler
                     state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray);
 
                     // construct the data
-                    var dataline = new DataBlock(state.Segment.Address, source, size, variableType, value, state.Procedure, state.Evaluator);
+                    var dataline = new DataBlock(state.Segment.Address, source, size, variableType, value, state.Procedure, state.Evaluator, false);
                     dataline.ProcessParts(false);
                     state.Segment.Address += dataline.Data.Length;
 
@@ -471,7 +472,18 @@ namespace BitMagic.Compiler
                 //}, new[] { "filename" })
                 .WithLine(".byte", (source, state) =>
                 {
-                    var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte);
+                    var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, false);
+                    dataline.ProcessParts(false);
+                    state.Segment.Address += dataline.Data.Length;
+
+                    state.Procedure.AddData(dataline);
+                    if (_project.CompileOptions.DisplayData)
+                        dataline.WriteToConsole(_logger);
+                })
+                // .byte data but that is executable.
+                .WithLine(".code", (source, state) => 
+                {
+                    var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, true);
                     dataline.ProcessParts(false);
                     state.Segment.Address += dataline.Data.Length;
 
@@ -481,14 +493,49 @@ namespace BitMagic.Compiler
                 })
                 .WithLine(".word", (source, state) =>
                 {
-                    var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsWord);
+                    var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsWord, false);
                     dataline.ProcessParts(false);
                     state.Segment.Address += dataline.Data.Length;
 
                     state.Procedure.AddData(dataline);
                     if (_project.CompileOptions.DisplayData)
                         dataline.WriteToConsole(_logger);
-                });
+                })
+                .WithParameters(".map", (dict, state, source) =>
+                {
+                    // change the map in the source for the next line to point to the filename and line
+                    var a = 0;
+
+                    if (!dict.ContainsKey("filename"))
+                        throw new Exception("No file name on .map");
+
+                    var filename = Path.GetFullPath(dict["filename"]);
+
+                    if (!File.Exists(filename))
+                        throw new Exception("file doesn't exist");
+
+                    int index = 0;
+                    foreach(var i in source.SourceFile.Parents)
+                    {
+                        if (i.Path == filename)
+                            break;
+                        index++;
+                    }
+                    var parentFile = index < source.SourceFile.Parents.Count ? source.SourceFile.Parents[index] : null;
+                    
+                    if (parentFile == null)
+                    {
+                        var staticFile = new StaticTextFile(File.ReadAllText(filename), filename, true);
+                        index = source.SourceFile.AddParent(staticFile);
+                        // todo: map parent to child
+                    }
+
+                    if (!int.TryParse(dict["line"], out var lineNumber)) // should be 0 based
+                        throw new Exception("Cannot parse line number to a int");
+
+                    source.SourceFile.SetParentMap(source.LineNumber, lineNumber, index); // not -1
+
+                }, new[] { "filename", "line" });
 
 
         public async Task<CompileResult> Compile()

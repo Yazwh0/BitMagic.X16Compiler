@@ -5,12 +5,15 @@ using System.Linq;
 
 namespace BitMagic.Compiler;
 
-public class Procedure
+public class Procedure : IScope
 {
     [JsonProperty]
     public string Name { get; }
     [JsonProperty]
     public Variables Variables { get; }
+
+    IVariables IScope.Variables => Variables;
+
     [JsonProperty]
     public List<IOutputData> Data { get; set; } = new List<IOutputData>();
 

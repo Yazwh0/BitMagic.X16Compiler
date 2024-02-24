@@ -13,12 +13,12 @@ public class StaticTextFile : SourceFileBase
 
     public override Task UpdateContent() => Task.CompletedTask;
 
-    public StaticTextFile(string content, string name = "")
+    public StaticTextFile(string content, string name = "", bool actualFile = false)
     {
         Content = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         Name = name;
         Path = name;
         Origin = SourceFileType.Static;
-        ActualFile = false;
+        ActualFile = actualFile;
     }
 }

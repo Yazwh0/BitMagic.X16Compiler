@@ -183,12 +183,15 @@ internal class CommandParser
             if (thisArgs[argsPos].EndsWith(','))
                 thisArgs[argsPos] = thisArgs[argsPos][..^1].Trim();
 
+            if (thisArgs[argsPos] == "_")
+                continue;
+
             var idx = thisArgs[argsPos].IndexOf(':');
 
             if (idx == -1)
                 idx = thisArgs[argsPos].IndexOf('=');
 
-            if (idx == -1)
+            if (idx == -1 || defaultNames == null) // if there are no default names, then we just set as there cant be named parameter
             {
                 if (defaultNames == null || defaultPos >= defaultNames.Count)
                     throw new CompilerCannotParseVerbParameters(source, $"Unknown parameter {thisArgs[argsPos]} at {source}");
@@ -197,10 +200,18 @@ internal class CommandParser
                 continue;
             }
 
-            var value = thisArgs[argsPos][(idx + 1)..].Trim();
+            var name = thisArgs[argsPos][..idx].Trim();
 
-            if (value != "_")
-                parameters.Add(thisArgs[argsPos][..idx].Trim(), value);
+            if (defaultNames.Contains(name))
+            {
+                var value = thisArgs[argsPos][(idx + 1)..].Trim();
+
+                parameters.Add(name, value);
+
+                continue;
+            }
+
+            parameters.Add(defaultNames[defaultPos++], thisArgs[argsPos]);
         }
 
         action(parameters, state, source);

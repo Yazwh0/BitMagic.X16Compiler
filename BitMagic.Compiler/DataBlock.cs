@@ -12,6 +12,8 @@ internal class DataBlock : IOutputData
     public bool RequiresReval { get; private set; }
     public List<string> RequiresRevalNames { get; } = new List<string>();
     public SourceFilePosition Source { get; }
+    public bool CanStep { get; }
+    public IScope Scope => _procedure;
 
     private readonly int _length;
     private readonly int _size;
@@ -21,7 +23,7 @@ internal class DataBlock : IOutputData
     private readonly Procedure _procedure;
 
     internal DataBlock(int address, SourceFilePosition source, int length, VariableType type, string expression,
-        Procedure procedure, IExpressionEvaluator expressionEvaluator)
+        Procedure procedure, IExpressionEvaluator expressionEvaluator, bool canStep)
     {
         Address = address;
         Source = source;
@@ -44,6 +46,7 @@ internal class DataBlock : IOutputData
         _type = type;
         _expressionEvaluator = expressionEvaluator;
         _procedure = procedure;
+        CanStep = canStep;
     }
 
     public void ProcessParts(bool finalParse)

@@ -21,6 +21,8 @@ public class Line : IOutputData
     public SourceFilePosition Source { get; }
     public string Params { get; }
     public int Address { get; }
+    public bool CanStep => true;
+    public IScope Scope => Procedure;
 
     private readonly ICpu _cpu;
     private readonly IExpressionEvaluator _expressionEvaluator;

@@ -1,4 +1,5 @@
 ﻿using BitMagic.Common;
+using BitMagic.Compiler.Exceptions;
 using CodingSeb.ExpressionEvaluator;
 using System;
 using System.Collections.Generic;
@@ -15,13 +16,17 @@ namespace BitMagic.Compiler
         private Procedure _procedure { get; }
         private LineType _lineType { get; }
         public SourceFilePosition Source { get; }
+        public IScope Scope => _procedure;
 
-        internal DataLine(Procedure proc, SourceFilePosition source, int address, LineType type)
+        public bool CanStep { get; }
+
+        internal DataLine(Procedure proc, SourceFilePosition source, int address, LineType type, bool canStep)
         {
             Source = source;
             Address = address;
             _procedure = proc;
             _lineType = type;
+            CanStep = canStep;
         }
 
         internal enum LineType
@@ -44,27 +49,35 @@ namespace BitMagic.Compiler
 
             if (idx == -1)
             {
-                throw new Exception("Cannot find data on the line");
+                throw new CannotCompileException(this, "Cannot find data on the line");
             }
 
             toProcess = toProcess.Substring(idx + 5).Trim();
 
             RequiresRevalNames.Clear();
             Line._evaluator.PreEvaluateVariable += _evaluator_PreEvaluateVariable;
-            var rawResult = Line._evaluator.Evaluate($"Array({toProcess})");
+            object rawResult;
+            try
+            {
+                rawResult = Line._evaluator.Evaluate($"Array({toProcess})");
+            } 
+            catch (Exception e)
+            {
+                throw new CannotCompileException(this, e.Message);
+            }
             Line._evaluator.PreEvaluateVariable -= _evaluator_PreEvaluateVariable;
 
             var result = rawResult as object[];
 
             if (result == null)
-                throw new Exception($"Expected object[] back, actually have {rawResult.GetType().Name}");
+                throw new CannotCompileException(this, $"Expected object[] back, actually have {rawResult.GetType().Name}");
 
             foreach (var r in result) 
             {
                 var i = r as int?;
 
                 if (i == null)
-                    throw new Exception($"Expected int? value back, actually have {r.GetType().Name} for {r}");
+                    throw new CannotCompileException(this, $"Expected int? value back, actually have {r.GetType().Name} for {r}");
 
                 if (_lineType == LineType.IsByte)
                 {

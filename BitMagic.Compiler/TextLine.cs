@@ -15,6 +15,10 @@ public class TextLine : IOutputData
     public List<string> RequiresRevalNames => new();
 
     public SourceFilePosition Source { get; }
+    public bool CanStep => false;
+
+    private EmptyScope EmptyScope = new EmptyScope();
+    public IScope Scope => EmptyScope;
 
     public void ProcessParts(bool finalParse)
     {
@@ -28,4 +32,11 @@ public class TextLine : IOutputData
     {
         Source = source;
     }
+}
+
+public class EmptyScope : IScope
+{
+    private readonly Variables EmptyVariables = new Variables("");
+    public IVariables Variables => EmptyVariables;
+    public string Name => "";
 }
