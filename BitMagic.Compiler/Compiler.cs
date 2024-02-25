@@ -512,7 +512,7 @@ namespace BitMagic.Compiler
                     var filename = Path.GetFullPath(dict["filename"]);
 
                     if (!File.Exists(filename))
-                        throw new Exception("file doesn't exist");
+                        throw new Exception("'${filename}' doesn't exist");
 
                     int index = 0;
                     foreach(var i in source.SourceFile.Parents)
@@ -531,7 +531,7 @@ namespace BitMagic.Compiler
                     }
 
                     if (!int.TryParse(dict["line"], out var lineNumber)) // should be 0 based
-                        throw new Exception("Cannot parse line number to a int");
+                        throw new Exception($"Cannot parse line number '{lineNumber}' to a int");
 
                     source.SourceFile.SetParentMap(source.LineNumber, lineNumber, index); // not -1
 
