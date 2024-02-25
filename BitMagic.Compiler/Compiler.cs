@@ -512,7 +512,7 @@ namespace BitMagic.Compiler
                     var filename = Path.GetFullPath(dict["filename"]);
 
                     if (!File.Exists(filename))
-                        throw new Exception("'${filename}' doesn't exist");
+                        throw new Exception($"'${filename}' doesn't exist");
 
                     int index = 0;
                     foreach(var i in source.SourceFile.Parents)
