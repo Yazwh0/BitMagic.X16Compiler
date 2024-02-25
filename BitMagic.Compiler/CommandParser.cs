@@ -184,7 +184,10 @@ internal class CommandParser
                 thisArgs[argsPos] = thisArgs[argsPos][..^1].Trim();
 
             if (thisArgs[argsPos] == "_")
+            {
+                defaultPos++;
                 continue;
+            }
 
             var idx = thisArgs[argsPos].IndexOf(':');
 
