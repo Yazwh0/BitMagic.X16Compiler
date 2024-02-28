@@ -12,7 +12,7 @@ internal class CommandParser
     private Regex _firstWord = new Regex("^\\s*(?<result>([.][\\w\\-:]+))(?<line>(.*))$");
 
     private Dictionary<string, Action<SourceFilePosition, CompileState, string>> _lineProcessor = new Dictionary<string, Action<SourceFilePosition, CompileState, string>>();
-    private Action<string, CompileState>? _labelProcessor;
+    private Action<string, CompileState, SourceFilePosition>? _labelProcessor;
 
     private CommandParser()
     {
@@ -41,7 +41,7 @@ internal class CommandParser
         return this;
     }
 
-    public CommandParser WithLabel(Action<string, CompileState> action)
+    public CommandParser WithLabel(Action<string, CompileState, SourceFilePosition> action)
     {
         _labelProcessor = action;
         return this;
@@ -67,7 +67,7 @@ internal class CommandParser
             if (_labelProcessor == null)
                 throw new Exception("Label processor is null");
 
-            _labelProcessor(thisVerb, state);
+            _labelProcessor(thisVerb, state, source);
             return;
         }
 

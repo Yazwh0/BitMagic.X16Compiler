@@ -40,10 +40,10 @@ namespace BitMagic.Compiler
         }
 
         private CommandParser CreateParser() => CommandParser.Parser()
-                .WithLabel((label, state) =>
+                .WithLabel((label, state, source) =>
                 {
                     if (label == ".:")
-                        throw new Exception("Labels require a name. .: is not valid.");
+                        throw new GeneralCompilerException(source, "Labels require a name. .: is not valid.");
 
                     state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableType.LabelPointer, false);
                 })
@@ -104,7 +104,7 @@ namespace BitMagic.Compiler
                         {
                             if (proc.Value.Data.Any())
                             {
-                                throw new Exception($"Cannot modify segment start address when it already has data. {segment.Name}");
+                                throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has data. {segment.Name}");
                             }
                         }
                     }
@@ -217,10 +217,6 @@ namespace BitMagic.Compiler
 
                         var (address, requiresReval) = eval(false);
 
-                        //if (requiresReval)
-                        //    throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
-
-
                         state.Procedure.Variables.SetValue(dict["name"], address, VariableType.Constant, requiresReval, evaluate: eval);
                         return;
                     }
@@ -231,21 +227,17 @@ namespace BitMagic.Compiler
 
                         var (address, requiresReval) = eval(false);
 
-                        //if (requiresReval)
-                        //    throw new Exception($"Cannot parse '{kv.Value}' into a value, constants cannot reference unprocessed variables.");
-
-
                         state.Procedure.Variables.SetValue(kv.Key, address, VariableType.Constant, requiresReval, evaluate: eval);
                     }
                 }, false)
                 .WithAssignment(".constvar", (dict, state, source) =>
                 {
                     if (!dict.ContainsKey("type"))
-                        throw new Exception("Missing type");
+                        throw new UnknownDataTypeCompilerException(source, "Missing type");
 
                     var typenameResult = _variableType.Matches(dict["type"]);
                     if (typenameResult.Count == 0)
-                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+                        throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
 
                     var match = typenameResult.First();
 
@@ -253,7 +245,7 @@ namespace BitMagic.Compiler
                     var sizeString = match.Groups["size"].Value;
 
                     if (string.IsNullOrWhiteSpace(typename))
-                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+                        throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
 
                     typename = typename.ToLower();
 
@@ -261,7 +253,7 @@ namespace BitMagic.Compiler
                     bool isArray = !string.IsNullOrWhiteSpace(sizeString);
                     if (isArray && !int.TryParse(sizeString, out size))
                     {
-                        throw new Exception($"Cannot parse {sizeString} into a int");
+                        throw new GeneralCompilerException(source, $"Cannot parse {sizeString} into a int");
                     }
 
                     // find value
@@ -287,7 +279,7 @@ namespace BitMagic.Compiler
                         "ulong" => VariableType.Ulong,
                         "proc" => VariableType.ProcStart,
                         "string" => size == 0 ? VariableType.String : VariableType.FixedStrings,
-                        _ => throw new Exception($"Unhandled type {typename}")
+                        _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                     };
 
                     size = size == 0 ? 1 : size;
@@ -299,20 +291,17 @@ namespace BitMagic.Compiler
 
                     var (address, requiresReval) = eval(false);
 
-                    //if (requiresReval)
-                    //    throw new Exception($"Cannot parse '{value}' into a value, constants cannot reference unprocessed variables.");
-
                     state.Procedure.Variables.SetValue(name, address, variableType, requiresReval, size, isArray, evaluate: eval);
 
                 }, true)
                 .WithAssignment(".var", (dict, state, source) =>
                 {
                     if (!dict.ContainsKey("type"))
-                        throw new Exception("Missing type");
+                        throw new UnknownDataTypeCompilerException(source, "Missing type");
 
                     var typenameResult = _variableType.Matches(dict["type"]);
                     if (typenameResult.Count == 0)
-                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+                        throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
 
                     var match = typenameResult.First();
 
@@ -320,7 +309,7 @@ namespace BitMagic.Compiler
                     var sizeString = match.Groups["size"].Value;
 
                     if (string.IsNullOrWhiteSpace(typename))
-                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+                        throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
 
                     typename = typename.ToLower();
 
@@ -328,7 +317,7 @@ namespace BitMagic.Compiler
                     bool isArray = !string.IsNullOrWhiteSpace(sizeString);
                     if (isArray && !int.TryParse(sizeString, out size))
                     {
-                        throw new Exception($"Cannot parse {sizeString} into a int");
+                        throw new GeneralCompilerException(source ,$"Cannot parse {sizeString} into a int");
                     }
 
                     // find value
@@ -354,7 +343,7 @@ namespace BitMagic.Compiler
                         "ulong" => VariableType.Ulong,
                         "string" => VariableType.FixedStrings,
                         "proc" => VariableType.ProcStart,
-                        _ => throw new Exception($"Unhandled type {typename}")
+                        _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                     };
                     state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray);
 
@@ -372,7 +361,7 @@ namespace BitMagic.Compiler
                 {
                     var padto = ParseStringToValue(dict["address"], () => new TextLine(source));
                     if (padto < state.Segment.Address)
-                        throw new Exception($"pad with destination of ${padto:X4}, but segment address is already ${state.Segment.Address:X4}");
+                        throw new GeneralCompilerException(source, $"pad with destination of ${padto:X4}, but segment address is already ${state.Segment.Address:X4}");
 
                     state.Segment.Address = padto;
                 }, new[] { "address" })
@@ -385,11 +374,11 @@ namespace BitMagic.Compiler
                 .WithAssignment(".padvar", (dict, state, source) =>
                 {
                     if (!dict.ContainsKey("type"))
-                        throw new Exception("Missing type");
+                        throw new UnknownDataTypeCompilerException(source, "Missing type");
 
                     var typenameResult = _variableType.Matches(dict["type"]);
                     if (typenameResult.Count == 0)
-                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+                        throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
 
                     var match = typenameResult.First();
 
@@ -397,7 +386,7 @@ namespace BitMagic.Compiler
                     var sizeString = match.Groups["size"].Value;
 
                     if (string.IsNullOrWhiteSpace(typename))
-                        throw new Exception($"Cannot parse '{dict["type"]}' into a typename");
+                        throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
 
                     typename = typename.ToLower();
 
@@ -405,7 +394,7 @@ namespace BitMagic.Compiler
                     var isArray = !string.IsNullOrWhiteSpace(sizeString);
                     if (isArray && !int.TryParse(sizeString, out size))
                     {
-                        throw new Exception($"Cannot parse {sizeString} into a int");
+                        throw new GeneralCompilerException(source, $"Cannot parse {sizeString} into a int");
                     }
 
                     // add the variable pointing at the data
@@ -422,7 +411,7 @@ namespace BitMagic.Compiler
                         "ulong" => VariableType.Ulong,
                         "string" => VariableType.FixedStrings,
                         "proc" => VariableType.ProcStart,
-                        _ => throw new Exception($"Unhandled type {typename}")
+                        _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                     };
 
                     state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray);
@@ -439,7 +428,7 @@ namespace BitMagic.Compiler
                         VariableType.Ulong => 8,
                         VariableType.FixedStrings => 1,
                         VariableType.ProcStart => 2,
-                        _ => throw new Exception($"Unhandled type {variableType}")
+                        _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {variableType}")
                     };
 
                     state.Segment.Address += size * length;
@@ -507,12 +496,12 @@ namespace BitMagic.Compiler
                     var a = 0;
 
                     if (!dict.ContainsKey("filename"))
-                        throw new Exception("No file name on .map");
+                        throw new MapFileNotFoundException(source, "No file name set on .map");
 
                     var filename = Path.GetFullPath(dict["filename"]);
 
                     if (!File.Exists(filename))
-                        throw new Exception($"'${filename}' doesn't exist");
+                        throw new MapFileNotFoundException(source, $"Map file '${filename}' doesn't exist");
 
                     int index = 0;
                     foreach(var i in source.SourceFile.Parents)
@@ -531,7 +520,7 @@ namespace BitMagic.Compiler
                     }
 
                     if (!int.TryParse(dict["line"], out var lineNumber)) // should be 0 based
-                        throw new Exception($"Cannot parse line number '{lineNumber}' to a int");
+                        throw new CannotParseCompilerException(source, $"Cannot parse line number '{lineNumber}' to a int");
 
                     source.SourceFile.SetParentMap(source.LineNumber, lineNumber, index); // not -1
 
