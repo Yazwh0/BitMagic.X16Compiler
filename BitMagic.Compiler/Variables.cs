@@ -146,10 +146,20 @@ public class Variables : IVariables
         }
     }
 
-    public void SetValue(string name, int value, VariableType variableType, bool requiresReval, int length = 0, bool array = false, 
-        Func<bool, (int Value, bool RequiresReval)>? evaluate = null)
+    public void SetValue(string name, int value, VariableType variableType, bool requiresReval, int length = 0, bool array = false,
+        Func<bool, (int Value, bool RequiresReval)>? evaluate = null, SourceFilePosition? position = null)
     {
-        var toAdd = new AsmVariable { Name = name, Value = value, VariableType = variableType, Length = length, Array = array, RequiresReval = requiresReval};
+        var toAdd = new AsmVariable
+        {
+            Name = name,
+            Value = value,
+            VariableType = variableType,
+            Length = length,
+            Array = array,
+            RequiresReval = requiresReval,
+            SourceFilePosition = position
+        };
+
         if (evaluate != null)
             toAdd.Evaluate = evaluate;
 
@@ -166,7 +176,7 @@ public class Variables : IVariables
     {
         var variables = _ambiguousVariables.GroupBy(i => i.Name).Where(i => i.Count() == 1).Select(i => i.First()).ToArray();
 
-        foreach(var i in variables)
+        foreach (var i in variables)
         {
             if (_variables.ContainsKey(i.Name))
                 throw new Exception($"Variable already defined {i.Name}");
@@ -175,7 +185,7 @@ public class Variables : IVariables
             _variables.Add(i.Name, i);
         }
 
-        foreach(var child in _children)
+        foreach (var child in _children)
         {
             child.MakeExplicit();
         }

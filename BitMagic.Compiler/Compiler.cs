@@ -45,7 +45,7 @@ namespace BitMagic.Compiler
                     if (label == ".:")
                         throw new GeneralCompilerException(source, "Labels require a name. .: is not valid.");
 
-                    state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableType.LabelPointer, false);
+                    state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableType.LabelPointer, false, position: source);
                 })
                 //.WithParameters(".scopedelimiter",  (dict, state, source) =>
                 //{
@@ -189,7 +189,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".endproc", (dict, state, source) =>
                 {
                     if (!state.Procedure.Variables.HasValue("endproc"))
-                        state.Procedure.Variables.SetValue("endproc", state.Segment.Address, VariableType.ProcEnd, false);
+                        state.Procedure.Variables.SetValue("endproc", state.Segment.Address, VariableType.ProcEnd, false, position: source);
 
                     if (state.Procedure.Anonymous)
                         state.Warnings.Add(new EndProcOnAnonymousWarning(source));
@@ -217,7 +217,7 @@ namespace BitMagic.Compiler
 
                         var (address, requiresReval) = eval(false);
 
-                        state.Procedure.Variables.SetValue(dict["name"], address, VariableType.Constant, requiresReval, evaluate: eval);
+                        state.Procedure.Variables.SetValue(dict["name"], address, VariableType.Constant, requiresReval, evaluate: eval, position: source);
                         return;
                     }
 
@@ -227,7 +227,7 @@ namespace BitMagic.Compiler
 
                         var (address, requiresReval) = eval(false);
 
-                        state.Procedure.Variables.SetValue(kv.Key, address, VariableType.Constant, requiresReval, evaluate: eval);
+                        state.Procedure.Variables.SetValue(kv.Key, address, VariableType.Constant, requiresReval, evaluate: eval, position: source);
                     }
                 }, false)
                 .WithAssignment(".constvar", (dict, state, source) =>
@@ -291,7 +291,7 @@ namespace BitMagic.Compiler
 
                     var (address, requiresReval) = eval(false);
 
-                    state.Procedure.Variables.SetValue(name, address, variableType, requiresReval, size, isArray, evaluate: eval);
+                    state.Procedure.Variables.SetValue(name, address, variableType, requiresReval, size, isArray, evaluate: eval, position: source);
 
                 }, true)
                 .WithAssignment(".var", (dict, state, source) =>
@@ -345,7 +345,7 @@ namespace BitMagic.Compiler
                         "proc" => VariableType.ProcStart,
                         _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                     };
-                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray);
+                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray, position: source);
 
                     // construct the data
                     var dataline = new DataBlock(state.Segment.Address, source, size, variableType, value, state.Procedure, state.Evaluator, false);
@@ -414,7 +414,7 @@ namespace BitMagic.Compiler
                         _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                     };
 
-                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray);
+                    state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray, position: source);
 
                     var length = variableType switch
                     {
@@ -834,7 +834,12 @@ namespace BitMagic.Compiler
                 var r = variable.Evaluate(true);
 
                 if (r.RequiresReval && throwOnReval)
-                    throw new UnknownConstantException($"Cannot compile constant {i.Name}");
+                {
+                    if (variable.SourceFilePosition != null)
+                        throw new UnknownConstantException(variable.SourceFilePosition, $"Cannot evaluate '{variable.SourceFilePosition.Source}'.");
+
+                    throw new Exception($"cannot evaluate {i.Name}, no sourec file position?!");
+                }
                 else if (r.RequiresReval)
                     toReturn++;
                 else
