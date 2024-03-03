@@ -154,7 +154,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".endsegment", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     state.Segment = state.Segments["Main"];
@@ -164,7 +164,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".scope", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     string name = dict.ContainsKey("name") ? dict["name"] : $"Scope_{state.AnonCounter}";
@@ -177,7 +177,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".endscope", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     if (!state.Procedure.Anonymous)
@@ -198,7 +198,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".proc", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     var name = dict.ContainsKey("name") ? dict["name"] : $"UnnamedProc_{state.AnonCounter++}";
@@ -209,7 +209,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".endproc", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     if (!state.Procedure.Variables.HasValue("endproc"))
@@ -231,7 +231,7 @@ namespace BitMagic.Compiler
                 .WithAssignment(".const", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     var variables = state.Procedure.Variables;
@@ -261,7 +261,7 @@ namespace BitMagic.Compiler
                 .WithAssignment(".constvar", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     if (!dict.ContainsKey("type"))
@@ -329,7 +329,7 @@ namespace BitMagic.Compiler
                 .WithAssignment(".var", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     if (!dict.ContainsKey("type"))
@@ -396,7 +396,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".org", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     var padto = ParseStringToValue(dict["address"], () => new TextLine(source));
@@ -408,7 +408,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".pad", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     var size = ParseStringToValue(dict["size"], () => new TextLine(source));
@@ -418,7 +418,7 @@ namespace BitMagic.Compiler
                 .WithAssignment(".padvar", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     if (!dict.ContainsKey("type"))
@@ -484,7 +484,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".align", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     var boundry = ParseStringToValue(dict["boundary"], () => new TextLine(source));
@@ -514,7 +514,7 @@ namespace BitMagic.Compiler
                 .WithLine(".byte", (source, state) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, false);
@@ -529,7 +529,7 @@ namespace BitMagic.Compiler
                 .WithLine(".code", (source, state) => 
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, true);
@@ -543,7 +543,7 @@ namespace BitMagic.Compiler
                 .WithLine(".word", (source, state) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsWord, false);
@@ -557,7 +557,7 @@ namespace BitMagic.Compiler
                 .WithParameters(".map", (dict, state, source) =>
                 {
                     // if we're parsing ZP segmentents only, jump out
-                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                         return;
 
                     // change the map in the source for the next line to point to the filename and line
