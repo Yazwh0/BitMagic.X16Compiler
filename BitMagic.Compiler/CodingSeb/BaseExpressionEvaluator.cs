@@ -38,7 +38,7 @@ namespace CodingSeb.ExpressionEvaluator
         protected string numberRegexPattern;
 
         // changed
-        protected static readonly Regex otherBasesNumberRegex = new Regex("^(?<sign>[+-])?((?<value>0(?<type>x)([0-9a-f][0-9a-f_]*[0-9a-f]|[0-9a-f])|0(?<type>b)([01][01_]*[01]|[01]))|((?<type>[$])([0-9a-f][0-9a-f_]*[0-9a-f]|[0-9a-f])|0(?<type>[%])([01][01_]*[01]|[01])))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        protected static readonly Regex otherBasesNumberRegex = new Regex("^(?<sign>[+-])?((?<value>0(?<type>x)([0-9a-f][0-9a-f_]*[0-9a-f]|[0-9a-f])|0(?<type>b)([01][01_]*[01]|[01]))|((?<type>[$])([0-9a-f][0-9a-f_]*[0-9a-f]|[0-9a-f])|(?<type>[%])([01][01_]*[01]|[01])))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         protected static readonly Regex stringBeginningRegex = new Regex("^(?<interpolated>[$])?(?<escaped>[@])?[\"]", RegexOptions.Compiled);
         protected static readonly Regex internalCharRegex = new Regex(@"^['](\\[\\'0abfnrtv]|[^'])[']", RegexOptions.Compiled);
         protected static readonly Regex indexingBeginningRegex = new Regex(@"^(?<nullConditional>[?])?\[", RegexOptions.Compiled);
