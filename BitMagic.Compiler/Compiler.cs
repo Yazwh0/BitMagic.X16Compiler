@@ -42,6 +42,10 @@ namespace BitMagic.Compiler
         private CommandParser CreateParser() => CommandParser.Parser()
                 .WithLabel((label, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
+                        return;
+
                     if (label == ".:")
                         throw new GeneralCompilerException(source, "Labels require a name. .: is not valid.");
 
@@ -945,7 +949,15 @@ namespace BitMagic.Compiler
 
             foreach (var line in proc.Data.Where(l => l.RequiresReval))
             {
-                line.ProcessParts(true);
+                try
+                {
+                    line.ProcessParts(true);
+                } 
+                catch (CannotCompileException)
+                {
+                    DisplayVariables(proc.Variables);
+                    throw;
+                }
 
                 if (showRevaluations)
                     line.WriteToConsole(_logger);
