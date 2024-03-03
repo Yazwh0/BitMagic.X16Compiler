@@ -134,27 +134,39 @@ namespace BitMagic.Compiler
                         segment.Filename = ":" + segment.Name; // todo: find a better way to inform the writer that this segment isn't to be written.
                     }
 
+                    // if we're parsing ZP segmentents only, jump out
+                    if (segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     state.Segment = segment;
 
-                    var scopeName = "MAIN";
+                    var scopeName = "Main";
 
                     if (dict.ContainsKey("scope"))
                         scopeName = dict["scope"];
 
                     if (string.IsNullOrWhiteSpace(scopeName))
-                        scopeName = "MAIN";
+                        scopeName = "Main";
 
                     state.Scope = state.ScopeFactory.GetScope(scopeName);
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
                 }, new[] { "name", "address", "maxsize", "filename", "scope" })
                 .WithParameters(".endsegment", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     state.Segment = state.Segments["Main"];
                     state.Scope = state.ScopeFactory.GetScope("Main");
                     state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
                 })
                 .WithParameters(".scope", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     string name = dict.ContainsKey("name") ? dict["name"] : $"Scope_{state.AnonCounter}";
                     state.Scope = state.ScopeFactory.GetScope(name);
 
@@ -164,6 +176,10 @@ namespace BitMagic.Compiler
                 }, new[] { "name" })
                 .WithParameters(".endscope", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     if (!state.Procedure.Anonymous)
                     {
                         state.Warnings.Add(new UnmatchedEndProcWarning(source));
@@ -181,6 +197,10 @@ namespace BitMagic.Compiler
                 })
                 .WithParameters(".proc", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     var name = dict.ContainsKey("name") ? dict["name"] : $"UnnamedProc_{state.AnonCounter++}";
 
                     state.Procedure = state.Procedure.GetProcedure(name, state.Segment.Address);
@@ -188,6 +208,10 @@ namespace BitMagic.Compiler
                 }, new[] { "name" })
                 .WithParameters(".endproc", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     if (!state.Procedure.Variables.HasValue("endproc"))
                         state.Procedure.Variables.SetValue("endproc", state.Segment.Address, VariableType.ProcEnd, false, position: source);
 
@@ -206,6 +230,10 @@ namespace BitMagic.Compiler
                 })
                 .WithAssignment(".const", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     var variables = state.Procedure.Variables;
                     var src = source;
 
@@ -232,6 +260,10 @@ namespace BitMagic.Compiler
                 }, false)
                 .WithAssignment(".constvar", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     if (!dict.ContainsKey("type"))
                         throw new UnknownDataTypeCompilerException(source, "Missing type");
 
@@ -296,6 +328,10 @@ namespace BitMagic.Compiler
                 }, true)
                 .WithAssignment(".var", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     if (!dict.ContainsKey("type"))
                         throw new UnknownDataTypeCompilerException(source, "Missing type");
 
@@ -359,6 +395,10 @@ namespace BitMagic.Compiler
                 }, true)
                 .WithParameters(".org", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     var padto = ParseStringToValue(dict["address"], () => new TextLine(source));
                     if (padto < state.Segment.Address)
                         throw new GeneralCompilerException(source, $"pad with destination of ${padto:X4}, but segment address is already ${state.Segment.Address:X4}");
@@ -367,12 +407,20 @@ namespace BitMagic.Compiler
                 }, new[] { "address" })
                 .WithParameters(".pad", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     var size = ParseStringToValue(dict["size"], () => new TextLine(source));
 
                     state.Segment.Address += size;
                 }, new[] { "size" })
                 .WithAssignment(".padvar", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     if (!dict.ContainsKey("type"))
                         throw new UnknownDataTypeCompilerException(source, "Missing type");
 
@@ -435,6 +483,10 @@ namespace BitMagic.Compiler
                 }, true)
                 .WithParameters(".align", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     var boundry = ParseStringToValue(dict["boundary"], () => new TextLine(source));
 
                     if (boundry == 0)
@@ -461,6 +513,10 @@ namespace BitMagic.Compiler
                 //}, new[] { "filename" })
                 .WithLine(".byte", (source, state) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, false);
                     dataline.ProcessParts(false);
                     state.Segment.Address += dataline.Data.Length;
@@ -472,6 +528,10 @@ namespace BitMagic.Compiler
                 // .byte data but that is executable.
                 .WithLine(".code", (source, state) => 
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, true);
                     dataline.ProcessParts(false);
                     state.Segment.Address += dataline.Data.Length;
@@ -482,6 +542,10 @@ namespace BitMagic.Compiler
                 })
                 .WithLine(".word", (source, state) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsWord, false);
                     dataline.ProcessParts(false);
                     state.Segment.Address += dataline.Data.Length;
@@ -492,8 +556,11 @@ namespace BitMagic.Compiler
                 })
                 .WithParameters(".map", (dict, state, source) =>
                 {
+                    // if we're parsing ZP segmentents only, jump out
+                    if (state.Segment.StartAddress > 0x100 && state.ZpParse)
+                        return;
+
                     // change the map in the source for the next line to point to the filename and line
-                    var a = 0;
 
                     if (!dict.ContainsKey("filename"))
                         throw new MapFileNotFoundException(source, "No file name set on .map");
@@ -634,47 +701,62 @@ namespace BitMagic.Compiler
             var previousLines = new StringBuilder();
             int lineNumber = 0;
 
-            foreach (var line in lines)
+            // Need to parse ZP based segments first.
+            // This is so ZP labels are all known when parsing opcodes to ensure the correct one is emitted.
+            // eg LDA $02 rather than LDA $0002.
+            state.ZpParse = true;
+
+            for(var i = 0; i < 2; i++) 
             {
-                lineNumber++;
-
-                if (string.IsNullOrWhiteSpace(line))
+                foreach (var line in lines)
                 {
-                    previousLines.AppendLine();
-                    continue;
+                    lineNumber++;
+
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        previousLines.AppendLine();
+                        continue;
+                    }
+
+                    if (line.StartsWith(';'))
+                    {
+                        previousLines.AppendLine(line);
+                        continue;
+                    }
+
+                    var idx = line.IndexOf(';');
+
+                    var thisLine = (idx == -1 ? line : line[..idx]).Trim();
+
+                    if (string.IsNullOrWhiteSpace(thisLine))
+                    {
+                        previousLines.AppendLine(line);
+                        continue;
+                    }
+
+                    if (thisLine.StartsWith('.'))
+                    {
+                        previousLines.Clear();
+                        var source = new SourceFilePosition { LineNumber = lineNumber, Source = thisLine, Name = _project.Code.Name, SourceFile = _project.Code };
+                        ParseCommand(source, state);
+                    }
+                    else
+                    {
+                        if ((state.ZpParse && state.Segment.StartAddress < 0x100) || (!state.ZpParse && state.Segment.StartAddress >= 0x100))
+                        {
+                            var parts = thisLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+                            previousLines.AppendLine(line);
+                            var source = new SourceFilePosition { LineNumber = lineNumber, Source = previousLines.ToString(), Name = _project.Code.Name, SourceFile = _project.Code };
+                            ParseAsm(parts, source, state);
+                            previousLines.Clear();
+                        }
+                    }
                 }
 
-                if (line.StartsWith(';'))
-                {
-                    previousLines.AppendLine(line);
-                    continue;
-                }
-
-                var idx = line.IndexOf(';');
-
-                var thisLine = (idx == -1 ? line : line[..idx]).Trim();
-
-                if (string.IsNullOrWhiteSpace(thisLine))
-                {
-                    previousLines.AppendLine(line);
-                    continue;
-                }
-
-                if (thisLine.StartsWith('.'))
-                {
-                    previousLines.Clear();
-                    var source = new SourceFilePosition { LineNumber = lineNumber, Source = thisLine, Name = _project.Code.Name, SourceFile = _project.Code };
-                    ParseCommand(source, state);
-                }
-                else
-                {
-                    var parts = thisLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    previousLines.AppendLine(line);
-                    var source = new SourceFilePosition { LineNumber = lineNumber, Source = previousLines.ToString(), Name = _project.Code.Name, SourceFile = _project.Code };
-                    ParseAsm(parts, source, state);
-                    previousLines.Clear();
-                }
+                state.ZpParse = false;
+                lineNumber = 0;
+                previousLines.Clear();
             }
         }
 

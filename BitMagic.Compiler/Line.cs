@@ -84,7 +84,13 @@ public class Line : IOutputData
                     if (finalParse && RequiresReval)
                         throw new CannotCompileException(this, $"Unknown label within '{_toParse}'");
 
+                    var currentLength = Data.Length;
+
                     Data = IntToByteArray(_opCode.GetOpCode(i.AccessMode)).Concat(compileResult.Data).ToArray();
+
+                    if (currentLength != 0 && currentLength != Data.Length)
+                        throw new CannotCompileException(this, $"Fatal error. While parsing '{_toParse}' the opcode data length has changed.");
+
                     return;
                 }
             } 

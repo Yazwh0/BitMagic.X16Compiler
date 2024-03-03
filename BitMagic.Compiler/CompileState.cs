@@ -30,6 +30,9 @@ public class CompileState
     internal readonly Queue<Scope> _scopeQueue = new Queue<Scope>();
 
     public List<CompilerWarning> Warnings = new List<CompilerWarning>();
+
+    public bool ZpParse { get; set; }
+
     public CompileState(Variables globals, string defaultFileName)
     {
         Globals = globals;
