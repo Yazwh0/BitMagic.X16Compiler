@@ -83,6 +83,34 @@ namespace BitMagic.Machines
             {"V_IER", 0x9f0e },
             {"V_ORA", 0x9f0f },
 
+            {"FX_CTRL", 0x9f29 },
+            {"FX_MULT", 0x9f2c },
+
+            {"FX_CACHE_L", 0x9f29 },
+            {"FX_CACHE_M", 0x9f2a },
+            {"FX_CACHE_H", 0x9f2b },
+            {"FX_CACHE_U", 0x9f2c },
+
+
+            // Constants
+            {"DC_SEL_0", 0x00 << 1 },
+            {"DC_SEL_1", 0x01 << 1 },
+            {"DC_SEL_2", 0x02 << 1 },
+            {"DC_SEL_3", 0x03 << 1 },
+            {"DC_SEL_4", 0x04 << 1 },
+            {"DC_SEL_5", 0x05 << 1 },
+            {"DC_SEL_6", 0x06 << 1 },
+
+            {"FX_CACHE_FILL", 0b100000 },
+            {"FX_CACHE_WRITE", 0b1000000 },
+            {"FX_4BIT", 0b100 },
+
+            {"FX_2BYTE_INCR", 0x01 },
+            {"FX_CACHE_INDEX_MASK", 0xb1100 },
+            {"FX_CACHE_INDEX_SHIFT", 2 },
+            {"FX_CACHE_NIBBLE_INDEX", 0xb10 },
+
+
             // From the kernel https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2004%20-%20KERNAL.md
             {"ACPTR", 0xFFA5},
             {"BASIN", 0xFFCF},
