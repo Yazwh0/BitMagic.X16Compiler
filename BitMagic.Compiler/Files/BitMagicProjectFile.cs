@@ -11,6 +11,7 @@ public class BitMagicProjectFile : SourceFileBase
     public override IReadOnlyList<ISourceFile> Parents { get; } = Array.Empty<ISourceFile>();
     public override IReadOnlyList<string> Content { get; protected set; }
     public override IReadOnlyList<ParentSourceMapReference> ParentMap { get; } = Array.Empty<ParentSourceMapReference>();
+    public override bool X16File => false;
 
     public BitMagicProjectFile()
     {

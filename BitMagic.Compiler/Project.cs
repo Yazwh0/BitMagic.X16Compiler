@@ -1,6 +1,8 @@
 ﻿using BitMagic.Common;
 using BitMagic.Compiler.Files;
+using Newtonsoft.Json;
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -76,12 +78,30 @@ public class Options
     public bool Beautify { get; set; }
 }
 
+[JsonObject("compileOptions")]
 public class CompileOptions
 {
+    [JsonProperty("displayVariables", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Display all the variables and their values.")]
     public bool DisplayVariables { get; set; }
+
+    [JsonProperty("displaySegments", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Display segments.")]
     public bool DisplaySegments { get; set; }
+
+    [JsonProperty("displayCode", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Display generated code.")]
     public bool DisplayCode { get; set; }
+
+    [JsonProperty("displayData", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Display generated data.")]
     public bool DisplayData { get; set; }
+
+    [JsonProperty("rebuild", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Force rebuild.")]
     public bool Rebuild { get; set; }
+
+    [JsonProperty("binFolder", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Bin folder for the dlls.")]
     public string BinFolder { get; set; } = "";
 }

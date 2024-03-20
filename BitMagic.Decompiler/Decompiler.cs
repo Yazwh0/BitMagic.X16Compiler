@@ -197,7 +197,7 @@ public class DecompileReturn : SourceFileBase
     public int RamBank { get; set; }
     public int RomBank { get; set; }
 
-    //    public ISourceFile? Parent => null;
+    public override bool X16File => false;
 
     public int LastAddress { get; set; }
     public Dictionary<int, DissasemblyItem> Items { get; set; } = new();

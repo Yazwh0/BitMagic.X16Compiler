@@ -11,6 +11,8 @@ public class StaticTextFile : SourceFileBase
     public override IReadOnlyList<string> Content { get; protected set; }
     public override IReadOnlyList<ParentSourceMapReference> ParentMap { get; } = Array.Empty<ParentSourceMapReference>();
 
+    public override bool X16File => false;
+
     public override Task UpdateContent() => Task.CompletedTask;
 
     public StaticTextFile(string content, string name = "", bool actualFile = false)
