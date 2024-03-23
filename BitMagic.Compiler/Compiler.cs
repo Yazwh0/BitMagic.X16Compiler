@@ -611,21 +611,21 @@ public class Compiler
 
                 state.Exception = true;
             })
-            .WithParameters(".nostep", (dict, state, source) =>
+            .WithParameters(".nostop", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
                 if (!dict.ContainsKey("enabled"))
-                    throw new NoStepNoArgumentsException(source, "nostep needs to be either set or not.");
+                    throw new NoStopNoArgumentsException(source, "nostop needs to be either set or not.");
 
                 if (bool.TryParse(dict["enabled"], out var enabled))
                 {
                     state.NoStop = enabled;
                 }
                 else
-                    throw new NoStepCannotParseEnabledException(source, $"cannot parse {dict["enabled"]} into true or false.");
+                    throw new NoStopCannotParseEnabledException(source, $"cannot parse {dict["enabled"]} into true or false.");
 
             }, new[] { "enabled" });
 
