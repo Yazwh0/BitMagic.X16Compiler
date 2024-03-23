@@ -6,81 +6,80 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BitMagic.Compiler
+namespace BitMagic.Compiler;
+
+internal interface IWriter
 {
-    internal interface IWriter
+    void Add(byte toAdd, int address);
+    void Add(byte[] toAdd, int address);
+    void SetHeader(IEnumerable<byte> toAdd);
+    NamedStream Write();
+}
+
+internal class FileWriter : IWriter
+{
+    public string FileName { get; }
+    public string SegmentName { get; }
+    public bool IsMain { get; }
+
+    private byte[] _header;
+    private List<byte> _data = new List<byte>(0x10000);
+    private int _startAddress;
+
+    public FileWriter(string segmentName, string fileName, int startAddress, bool main)
     {
-        void Add(byte toAdd, int address);
-        void Add(byte[] toAdd, int address);
-        void SetHeader(IEnumerable<byte> toAdd);
-        NamedStream Write();
+        SegmentName = segmentName;
+        FileName = fileName;
+        _startAddress = startAddress;
+        _header = Array.Empty<byte>();
+        IsMain = main;
     }
 
-    internal class FileWriter : IWriter
+    public void Add(byte toAdd, int address)
     {
-        public string FileName { get; }
-        public string SegmentName { get; }
-        public bool IsMain { get; }
+        var index = _startAddress - address;
 
-        private byte[] _header;
-        private List<byte> _data = new List<byte>(0x10000);
-        private int _startAddress;
+        if (index < 0)
+            throw new IndexOutOfRangeException();
 
-        public FileWriter(string segmentName, string fileName, int startAddress, bool main)
+        while (_data.Count < index)
         {
-            SegmentName = segmentName;
-            FileName = fileName;
-            _startAddress = startAddress;
-            _header = Array.Empty<byte>();
-            IsMain = main;
+            _data.Add(0x00);
         }
 
-        public void Add(byte toAdd, int address)
+        if (_data[index] != 0)
+            throw new Exception("Overwrite detected!");
+
+        _data[index] = toAdd;
+    }
+
+    public void Add(byte[] toAdd, int address)
+    {
+        var index = address - _startAddress;
+
+        if (index < 0)
+            throw new IndexOutOfRangeException();
+
+        while (_data.Count < index + toAdd.Length)
         {
-            var index = _startAddress - address;
+            _data.Add(0x00);
+        }
 
-            if (index < 0)
-                throw new IndexOutOfRangeException();
-
-            while (_data.Count < index)
-            {
-                _data.Add(0x00);
-            }
-
+        for(var i = 0; i < toAdd.Length; i++)
+        {
             if (_data[index] != 0)
                 throw new Exception("Overwrite detected!");
 
-            _data[index] = toAdd;
+            _data[index++] = toAdd[i];
         }
-
-        public void Add(byte[] toAdd, int address)
-        {
-            var index = address - _startAddress;
-
-            if (index < 0)
-                throw new IndexOutOfRangeException();
-
-            while (_data.Count < index + toAdd.Length)
-            {
-                _data.Add(0x00);
-            }
-
-            for(var i = 0; i < toAdd.Length; i++)
-            {
-                if (_data[index] != 0)
-                    throw new Exception("Overwrite detected!");
-
-                _data[index++] = toAdd[i];
-            }
-        }
-
-        public bool HasData => _data.Count > 0;
-
-        public void SetHeader(IEnumerable<byte> toAdd)
-        {
-            _header = toAdd.ToArray();
-        }
-
-        public NamedStream Write() => new (SegmentName, FileName, _header.Concat(_data).ToArray(), IsMain);        
     }
+
+    public bool HasData => _data.Count > 0;
+
+    public void SetHeader(IEnumerable<byte> toAdd)
+    {
+        _header = toAdd.ToArray();
+    }
+
+    public NamedStream Write() => new (SegmentName, FileName, _header.Concat(_data).ToArray(), IsMain);        
 }
