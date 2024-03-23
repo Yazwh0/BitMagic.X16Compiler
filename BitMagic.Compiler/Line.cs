@@ -12,6 +12,8 @@ public class Line : IOutputData
     public readonly static Asm6502ExpressionEvaluator _evaluator = new();
 
     public byte[] Data { get; internal set; } = new byte[] { };
+    public uint[] DebugData { get; internal set; } = new uint[] { };
+    private uint _debugData;
     private readonly ICpuOpCode _opCode;
     public bool RequiresReval { get; internal set; }
     public List<string> RequiresRevalNames { get; } = new List<string>();
@@ -27,7 +29,7 @@ public class Line : IOutputData
     private readonly ICpu _cpu;
     private readonly IExpressionEvaluator _expressionEvaluator;
 
-    internal Line(ICpuOpCode opCode, SourceFilePosition source, Procedure proc, ICpu cpu, IExpressionEvaluator expressionEvaluator, int address, string[] parts)
+    internal Line(ICpuOpCode opCode, SourceFilePosition source, Procedure proc, ICpu cpu, IExpressionEvaluator expressionEvaluator, int address, string[] parts, CompileState state)
     {
         _cpu = cpu;
         _expressionEvaluator = expressionEvaluator;
@@ -38,6 +40,7 @@ public class Line : IOutputData
         Params = _toParse;
         Address = address;
         Source = source;
+        _debugData = state.GetDebugData();
     }
 
     private IEnumerable<byte> IntToByteArray(uint i)
@@ -87,6 +90,10 @@ public class Line : IOutputData
                     var currentLength = Data.Length;
 
                     Data = IntToByteArray(_opCode.GetOpCode(i.AccessMode)).Concat(compileResult.Data).ToArray();
+                    DebugData = new uint[Data.Length];
+                    DebugData[0] = _debugData;
+                    for (var j = 1; j < Data.Length; j++)
+                        DebugData[j] = _debugData & 0xfffffffe;
 
                     if (currentLength != 0 && currentLength != Data.Length)
                         throw new CannotCompileException(this, $"Fatal error. While parsing '{_toParse}' the opcode data length has changed.");

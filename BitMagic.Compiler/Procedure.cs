@@ -92,7 +92,7 @@ public class Procedure : IScope
     {
         foreach (var d in Data)
         {
-            writer.Add(d.Data, d.Address);
+            writer.Add(d.Data, d.Address, d.DebugData);
         }
 
         foreach(var p in _procedures.Values)

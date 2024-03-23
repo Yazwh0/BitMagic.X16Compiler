@@ -356,7 +356,7 @@ public class Compiler
                 bool isArray = !string.IsNullOrWhiteSpace(sizeString);
                 if (isArray && !int.TryParse(sizeString, out size))
                 {
-                    throw new GeneralCompilerException(source ,$"Cannot parse {sizeString} into a int");
+                    throw new GeneralCompilerException(source, $"Cannot parse {sizeString} into a int");
                 }
 
                 // find value
@@ -520,7 +520,7 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, false);
+                var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, false, state);
                 dataline.ProcessParts(false);
                 state.Segment.Address += dataline.Data.Length;
 
@@ -529,13 +529,13 @@ public class Compiler
                     dataline.WriteToConsole(_logger);
             })
             // .byte data but that is executable.
-            .WithLine(".code", (source, state) => 
+            .WithLine(".code", (source, state) =>
             {
                 // if we're parsing ZP segmentents only, jump out
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, true);
+                var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsByte, true, state);
                 dataline.ProcessParts(false);
                 state.Segment.Address += dataline.Data.Length;
 
@@ -549,7 +549,7 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsWord, false);
+                var dataline = new DataLine(state.Procedure, source, state.Segment.Address, DataLine.LineType.IsWord, false, state);
                 dataline.ProcessParts(false);
                 state.Segment.Address += dataline.Data.Length;
 
@@ -574,14 +574,14 @@ public class Compiler
                     throw new MapFileNotFoundException(source, $"Map file '${filename}' doesn't exist");
 
                 int index = 0;
-                foreach(var i in source.SourceFile.Parents)
+                foreach (var i in source.SourceFile.Parents)
                 {
                     if (i.Path == filename)
                         break;
                     index++;
                 }
                 var parentFile = index < source.SourceFile.Parents.Count ? source.SourceFile.Parents[index] : null;
-                
+
                 if (parentFile == null)
                 {
                     var staticFile = new StaticTextFile(File.ReadAllText(filename), filename, true);
@@ -594,8 +594,40 @@ public class Compiler
 
                 source.SourceFile.SetParentMap(source.LineNumber, lineNumber, index); // not -1
 
-            }, new[] { "filename", "line" });
+            }, new[] { "filename", "line" })
+            .WithParameters(".breakpoint", (_, state, _) =>
+            {
+                // if we're parsing ZP segmentents only, jump out
+                if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
+                    return;
 
+                state.Breakpoint = true;
+            })
+            .WithParameters(".exception", (_, state, _) =>
+            {
+                // if we're parsing ZP segmentents only, jump out
+                if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
+                    return;
+
+                state.Exception = true;
+            })
+            .WithParameters(".nostep", (dict, state, source) =>
+            {
+                // if we're parsing ZP segmentents only, jump out
+                if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
+                    return;
+
+                if (!dict.ContainsKey("enabled"))
+                    throw new NoStepNoArgumentsException(source, "nostep needs to be either set or not.");
+
+                if (bool.TryParse(dict["enabled"], out var enabled))
+                {
+                    state.NoStop = enabled;
+                }
+                else
+                    throw new NoStepCannotParseEnabledException(source, $"cannot parse {dict["enabled"]} into true or false.");
+
+            }, new[] { "enabled" });
 
     public async Task<CompileResult> Compile()
     {
@@ -709,7 +741,7 @@ public class Compiler
         // eg LDA $02 rather than LDA $0002.
         state.ZpParse = true;
 
-        for(var i = 0; i < 2; i++) 
+        for (var i = 0; i < 2; i++)
         {
             foreach (var line in lines)
             {
@@ -909,7 +941,7 @@ public class Compiler
 
         state.Globals.MakeExplicit();
 
-        foreach(var (_, i) in state.Globals.GetChildVariables(""))
+        foreach (var (_, i) in state.Globals.GetChildVariables(""))
         {
             if (!i.RequiresReval)
                 continue;
@@ -951,7 +983,7 @@ public class Compiler
             try
             {
                 line.ProcessParts(true);
-            } 
+            }
             catch (CannotCompileException)
             {
                 DisplayVariables(proc.Variables);
@@ -989,7 +1021,7 @@ public class Compiler
 
         var opCode = _opCodes[code];
 
-        var toAdd = new Line(opCode, source, state.Procedure, _project.Machine.Cpu, state.Evaluator, state.Segment.Address, parts[1..]);
+        var toAdd = new Line(opCode, source, state.Procedure, _project.Machine.Cpu, state.Evaluator, state.Segment.Address, parts[1..], state);
 
         toAdd.ProcessParts(false);
 
@@ -1015,7 +1047,7 @@ public class Compiler
             if (int.TryParse(inp, out var result))
                 return result;
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             throw new CompilerStringParseException(getLine(), e.Message, inp);
         }

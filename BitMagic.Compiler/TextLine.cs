@@ -7,6 +7,7 @@ namespace BitMagic.Compiler;
 public class TextLine : IOutputData
 {
     public byte[] Data => Array.Empty<byte>();
+    public uint[] DebugData => Array.Empty<uint>();
 
     public int Address => 0;
 
@@ -17,7 +18,7 @@ public class TextLine : IOutputData
     public SourceFilePosition Source { get; }
     public bool CanStep => false;
 
-    private EmptyScope EmptyScope = new EmptyScope();
+    private readonly EmptyScope EmptyScope = new EmptyScope();
     public IScope Scope => EmptyScope;
 
     public void ProcessParts(bool finalParse)

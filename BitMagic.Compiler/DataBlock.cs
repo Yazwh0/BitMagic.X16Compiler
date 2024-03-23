@@ -8,6 +8,7 @@ namespace BitMagic.Compiler;
 internal class DataBlock : IOutputData
 {
     public byte[] Data { get; private set; } = new byte[] { };
+    public uint[] DebugData { get; private set; } = new uint[] { };
     public int Address { get; }
     public bool RequiresReval { get; private set; }
     public List<string> RequiresRevalNames { get; } = new List<string>();
@@ -52,8 +53,7 @@ internal class DataBlock : IOutputData
     public void ProcessParts(bool finalParse)
     {
         Data = new byte[_length * _size];
-
-        var data = new byte[_size];
+        DebugData = new uint[_length * _size];
 
         if (_type == VariableType.FixedStrings)
         {
@@ -67,13 +67,13 @@ internal class DataBlock : IOutputData
             }
             return;
         }
-        else
-        {
-            var (result, requiresReval) = _expressionEvaluator.Evaluate(_expression, Source, _procedure.Variables, Address, finalParse);
-            RequiresReval = requiresReval;
 
-            BitConverter.GetBytes(result)[.._size].CopyTo(data, 0);
-        }
+        var data = new byte[_size];
+
+        var (result, requiresReval) = _expressionEvaluator.Evaluate(_expression, Source, _procedure.Variables, Address, finalParse);
+        RequiresReval = requiresReval;
+
+        BitConverter.GetBytes(result)[.._size].CopyTo(data, 0);
 
         for (var i = 0; i < _length; i++)
         {

@@ -33,6 +33,22 @@ public class CompileState
 
     public bool ZpParse { get; set; }
 
+    public bool NoStop { get; set; }
+    public bool Breakpoint { get; set; }
+    public bool Exception { get; set; }
+
+    public uint GetDebugData()
+    {
+        var toReturn = (Breakpoint ? DebugConstants.Breakpoint : 0u) +
+                       (NoStop ? DebugConstants.NoStop : 0u) +
+                       (Exception ? DebugConstants.Exception : 0u);
+
+        Breakpoint = false;
+        Exception = false;
+
+        return toReturn;
+    }
+
     public CompileState(Variables globals, string defaultFileName)
     {
         Globals = globals;

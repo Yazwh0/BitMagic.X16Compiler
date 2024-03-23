@@ -1,17 +1,13 @@
-﻿using BitMagic.Common;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BitMagic.Compiler;
 
 internal interface IWriter
 {
-    void Add(byte toAdd, int address);
-    void Add(byte[] toAdd, int address);
+    void Add(byte toAdd, int address, uint debugData);
+    void Add(byte[] toAdd, int address, uint[] debugData);
     void SetHeader(IEnumerable<byte> toAdd);
     NamedStream Write();
 }
@@ -24,6 +20,7 @@ internal class FileWriter : IWriter
 
     private byte[] _header;
     private List<byte> _data = new List<byte>(0x10000);
+    private List<uint> _debugData = new List<uint>();
     private int _startAddress;
 
     public FileWriter(string segmentName, string fileName, int startAddress, bool main)
@@ -35,7 +32,7 @@ internal class FileWriter : IWriter
         IsMain = main;
     }
 
-    public void Add(byte toAdd, int address)
+    public void Add(byte toAdd, int address, uint debugData)
     {
         var index = _startAddress - address;
 
@@ -45,15 +42,17 @@ internal class FileWriter : IWriter
         while (_data.Count < index)
         {
             _data.Add(0x00);
+            _debugData.Add(0x00);
         }
 
         if (_data[index] != 0)
             throw new Exception("Overwrite detected!");
 
         _data[index] = toAdd;
+        _debugData[index] = debugData;
     }
 
-    public void Add(byte[] toAdd, int address)
+    public void Add(byte[] toAdd, int address, uint[] debugData)
     {
         var index = address - _startAddress;
 
@@ -63,6 +62,7 @@ internal class FileWriter : IWriter
         while (_data.Count < index + toAdd.Length)
         {
             _data.Add(0x00);
+            _debugData.Add(0x00);
         }
 
         for(var i = 0; i < toAdd.Length; i++)
@@ -70,6 +70,7 @@ internal class FileWriter : IWriter
             if (_data[index] != 0)
                 throw new Exception("Overwrite detected!");
 
+            _debugData[index] = debugData[i];
             _data[index++] = toAdd[i];
         }
     }
@@ -81,5 +82,5 @@ internal class FileWriter : IWriter
         _header = toAdd.ToArray();
     }
 
-    public NamedStream Write() => new (SegmentName, FileName, _header.Concat(_data).ToArray(), IsMain);        
+    public NamedStream Write() => new (SegmentName, FileName, _header.Concat(_data).ToArray(), _debugData.ToArray(), IsMain);        
 }

@@ -10,6 +10,8 @@ namespace BitMagic.Compiler
     public class DataLine : IOutputData
     {
         public byte[] Data { get; private set; } = new byte[] { };
+        public uint[] DebugData { get; private set; } = new uint[] { };
+        private uint _debugData;
         public int Address { get; }
         public bool RequiresReval { get; private set; }
         public List<string> RequiresRevalNames { get; } = new List<string>();
@@ -20,13 +22,14 @@ namespace BitMagic.Compiler
 
         public bool CanStep { get; }
 
-        internal DataLine(Procedure proc, SourceFilePosition source, int address, LineType type, bool canStep)
+        internal DataLine(Procedure proc, SourceFilePosition source, int address, LineType type, bool canStep, CompileState state)
         {
             Source = source;
             Address = address;
             _procedure = proc;
             _lineType = type;
             CanStep = canStep;
+            _debugData = canStep ? state.GetDebugData() : 0u;
         }
 
         internal enum LineType
@@ -93,6 +96,10 @@ namespace BitMagic.Compiler
             }
 
             Data = data.ToArray();
+            DebugData = new uint[Data.Length];
+            DebugData[0] = _debugData;
+            for (var j = 1; j < Data.Length; j++)
+                DebugData[j] = _debugData & 0xffff_fffe;
         }
 
         private void _evaluator_PreEvaluateVariable(object? sender, VariablePreEvaluationEventArg e)
