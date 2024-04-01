@@ -16,7 +16,7 @@ public class TextLine : IOutputData
     public List<string> RequiresRevalNames => new();
 
     public SourceFilePosition Source { get; }
-    public bool CanStep => false;
+    public bool CanStep { get; }
 
     private readonly EmptyScope EmptyScope = new EmptyScope();
     public IScope Scope => EmptyScope;
@@ -29,9 +29,10 @@ public class TextLine : IOutputData
     {
     }
 
-    public TextLine(SourceFilePosition source)
+    public TextLine(SourceFilePosition source, bool canStep)
     {
         Source = source;
+        CanStep = canStep;
     }
 }
 

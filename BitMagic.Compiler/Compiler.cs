@@ -103,24 +103,26 @@ public class Compiler
 
                 if (dict.ContainsKey("address"))
                 {
-                    foreach (var proc in segment.DefaultProcedure)
+                    var address = ParseStringToValue(dict["address"], () => new TextLine(source, false));
+
+                    if (address != segment.StartAddress)
                     {
-                        if (proc.Value.Data.Any())
+                        foreach (var proc in segment.DefaultProcedure)
                         {
-                            throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has data. {segment.Name}");
+                            if (proc.Value.Data.Any())
+                            {
+                                throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has data. {segment.Name}");
+                            }
                         }
                     }
-                }
 
-                if (dict.ContainsKey("address"))
-                {
-                    segment.Address = ParseStringToValue(dict["address"], () => new TextLine(source));
+                    segment.Address = address;
                     segment.StartAddress = segment.Address;
                 }
 
                 if (dict.ContainsKey("maxsize"))
                 {
-                    segment.MaxSize = ParseStringToValue(dict["maxsize"], () => new TextLine(source));
+                    segment.MaxSize = ParseStringToValue(dict["maxsize"], () => new TextLine(source, false));
                 }
 
                 if (dict.ContainsKey("filename"))
@@ -402,7 +404,7 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                var padto = ParseStringToValue(dict["address"], () => new TextLine(source));
+                var padto = ParseStringToValue(dict["address"], () => new TextLine(source, false));
                 if (padto < state.Segment.Address)
                     throw new GeneralCompilerException(source, $"pad with destination of ${padto:X4}, but segment address is already ${state.Segment.Address:X4}");
 
@@ -414,7 +416,7 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                var size = ParseStringToValue(dict["size"], () => new TextLine(source));
+                var size = ParseStringToValue(dict["size"], () => new TextLine(source, false));
 
                 state.Segment.Address += size;
             }, new[] { "size" })
@@ -490,7 +492,7 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                var boundry = ParseStringToValue(dict["boundary"], () => new TextLine(source));
+                var boundry = ParseStringToValue(dict["boundary"], () => new TextLine(source, false));
 
                 if (boundry == 0)
                     return;
