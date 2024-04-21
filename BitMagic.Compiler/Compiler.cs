@@ -90,15 +90,17 @@ public class Compiler
             .WithParameters(".segment", (dict, state, source) =>
             {
                 Segment segment;
-
+                bool newSegment;
                 if (state.Segments.ContainsKey(dict["name"]))
                 {
                     segment = state.Segments[dict["name"]];
+                    newSegment = false;
                 }
                 else
                 {
                     segment = new Segment(state.Globals, dict["name"]);
                     state.Segments.Add(dict["name"], segment);
+                    newSegment = true;
                 }
 
                 if (dict.ContainsKey("address"))
@@ -136,7 +138,8 @@ public class Compiler
                 }
                 else
                 {
-                    segment.Filename = ":" + segment.Name; // todo: find a better way to inform the writer that this segment isn't to be written.
+                    if (newSegment)
+                        segment.Filename = ":" + segment.Name; // todo: find a better way to inform the writer that this segment isn't to be written.
                 }
 
                 // if we're parsing ZP segmentents only, jump out
