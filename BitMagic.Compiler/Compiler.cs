@@ -576,7 +576,8 @@ public class Compiler
                 var filename = Path.GetFullPath(dict["filename"]);
 
                 if (!File.Exists(filename))
-                    throw new MapFileNotFoundException(source, $"Map file '${filename}' doesn't exist");
+                    return;
+                    //throw new MapFileNotFoundException(source, $"Map file '${filename}' doesn't exist");
 
                 int index = 0;
                 foreach (var i in source.SourceFile.Parents)
