@@ -214,7 +214,8 @@ namespace BitMagic.Machines
             {"TKSA", 0xFF96},
             {"UDTIM", 0xFFEA},
             {"UNLSN", 0xFFAE},
-            {"UNTLK", 0xFFAB}
+            {"UNTLK", 0xFFAB},
+            {"extapi", 0xFEAB }
 
         }.ToDictionary(i => i.Key, i => (IAsmVariable)(new AsmVariable { Name = i.Key, Value = i.Value, VariableType = VariableType.Ushort }));
 
