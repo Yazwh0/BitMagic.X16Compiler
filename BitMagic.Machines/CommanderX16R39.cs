@@ -84,6 +84,8 @@ namespace BitMagic.Machines
             {"V_ORA", 0x9f0f },
 
             {"FX_CTRL", 0x9f29 },
+            {"FX_ACCUM_RESET", 0x9f29 },
+            {"FX_ACCUM", 0x9f2a },
             {"FX_MULT", 0x9f2c },
 
             {"FX_CACHE_L", 0x9f29 },
