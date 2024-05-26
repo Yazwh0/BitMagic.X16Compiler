@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace BitMagic.Compiler;
 
@@ -128,6 +129,32 @@ public class Variables : IVariables
             default:
                 throw new VariableException(source, name, $"Cannot find unique match for {name}. Possibilities: {string.Join(", ", matches.Select(i => i.Name))}");
         }
+    }
+
+    public bool TryGetValue(int value, SourceFilePosition source, out IAsmVariable? result)
+    {
+        foreach (var i in _variables.Where(i => i.Value.Value == value))
+        {
+            result = i.Value;
+            return true;
+        }
+
+        foreach (var child in _children.Where(i => i != null))
+        {
+            foreach (var v in child.GetChildVariables(child.Namespace).Where(v => v.Value.Value == value))
+            {
+                result = v.Value;
+                return true;
+            }
+        }
+
+        if (_parent != null)
+        {
+            return _parent.TryGetValue(value, source, out result);
+        }
+
+        result = null;
+        return false;
     }
 
     public IEnumerable<(string Name, IAsmVariable Value)> GetChildVariables(string prepend)

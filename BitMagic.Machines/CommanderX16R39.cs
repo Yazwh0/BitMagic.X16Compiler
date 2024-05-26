@@ -88,6 +88,9 @@ namespace BitMagic.Machines
             {"FX_ACCUM", 0x9f2a },
             {"FX_MULT", 0x9f2c },
 
+            {"FX_X_INCR_L", 0x9f29 },
+            {"FX_X_INCR_H", 0x9f2a },
+
             {"FX_CACHE_L", 0x9f29 },
             {"FX_CACHE_M", 0x9f2a },
             {"FX_CACHE_H", 0x9f2b },
@@ -226,5 +229,10 @@ namespace BitMagic.Machines
 
         // todo: create abstract class or similar.
         public bool TryGetValue(string name, SourceFilePosition source, out IAsmVariable result) => throw new Exception();
+
+        public bool TryGetValue(int value, SourceFilePosition source, out IAsmVariable? result)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

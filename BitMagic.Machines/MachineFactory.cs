@@ -1,6 +1,7 @@
 ﻿using BitMagic.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace BitMagic.Machines;
 
@@ -68,6 +69,12 @@ internal class NoVariables : IVariables
     public IList<IAsmVariable> AmbiguousVariables => Array.Empty<IAsmVariable>();
 
     public bool TryGetValue(string name, SourceFilePosition source, out IAsmVariable? result)
+    {
+        result = default;
+        return false;
+    }
+
+    public bool TryGetValue(int value, SourceFilePosition source, out IAsmVariable? result)
     {
         result = default;
         return false;

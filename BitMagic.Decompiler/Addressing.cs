@@ -45,6 +45,27 @@ public static class Addressing
         _ => "??"
     };
 
+    public static string GetModeText(AddressMode addressMode, string value, int currentAddress) => addressMode switch
+    {
+        AddressMode.Implied => "",
+        AddressMode.Accumulator => "",
+        AddressMode.Immediate => $"#{value}",
+        AddressMode.Absolute => value,
+        AddressMode.XIndexAbsolute => $"{value}, x",
+        AddressMode.YIndexAbsolute => $"{value}, y",
+        AddressMode.AbsoluteIndirect => $"({value})",
+        AddressMode.AbsoluteXIndexIndirect => $"({value}, x)",
+        AddressMode.ZeroPage => $"{value}",
+        AddressMode.XIndexedZeroPage => $"{value}, x",
+        AddressMode.YIndexedZeroPage => $"{value}, y",
+        AddressMode.ZeroPageIndirect => $"({value})",
+        AddressMode.XIndexZeroPageIndirect => $"({value}, x)",
+        AddressMode.ZeroPageIndirectYIndexed => $"({value}), y",
+        AddressMode.Relative => value,
+      //  AddressMode.ZeroPageRelative => $"${value & 0xff:X2}, ${(sbyte)((value & 0xff00) >> 8) + currentAddress + 3:X4}",
+        _ => "??"
+    };
+
     public static string GetPrimaryValue(AddressMode addressMode, int value, int currentAddress) => addressMode switch
     {
         AddressMode.Implied => "",

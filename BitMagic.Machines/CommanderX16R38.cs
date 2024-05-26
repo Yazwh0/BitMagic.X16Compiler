@@ -90,4 +90,9 @@ internal class CommanderX16R38Defaults : IVariables
 
     // todo: create abstract class or similar.
     public bool TryGetValue(string name, SourceFilePosition source, out IAsmVariable? result) => throw new Exception();
+
+    public bool TryGetValue(int value, SourceFilePosition source, out IAsmVariable? result)
+    {
+        throw new NotImplementedException();
+    }
 }
