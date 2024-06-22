@@ -23,9 +23,6 @@ public class Segment
     [JsonProperty]
     public int MaxSize { get; set; }
 
-    //[JsonProperty]
-    //public readonly Dictionary<string, Procedure> Procedures = new Dictionary<string, Procedure>();
-
     [JsonProperty]
     public Dictionary<string, Procedure> DefaultProcedure { get; } = new Dictionary<string, Procedure>();
 
@@ -48,18 +45,11 @@ public class Segment
         Filename = filename;
     }
 
-    public Procedure GetDefaultProcedure(Scope scope)
+    public Procedure GetDefaultProcedure(CompileState state)
     {
-        if (!DefaultProcedure.ContainsKey(scope.Name))
-            DefaultProcedure.Add(scope.Name, new Procedure(scope, $"Segment_{Name}_{scope.Name}_Default", true, null));
+        if (!DefaultProcedure.ContainsKey(state.Scope.Name))
+            DefaultProcedure.Add(state.Scope.Name, new Procedure(state.Scope, $"Segment_{Name}_{state.Scope.Name}_Default", true, state.Procedure));
 
-        return DefaultProcedure[scope.Name];
+        return DefaultProcedure[state.Scope.Name];
     }
-    //public Procedure GetProcedure(string name, Scope scope, bool anonymous, Procedure parent)
-    //{
-    //    if (!Procedures.ContainsKey(name))
-    //        Procedures.Add(name, new Procedure(scope, name, anonymous, parent));
-
-    //    return Procedures[name];
-    //}
 }

@@ -25,26 +25,27 @@ public class CompileState
 
     [JsonProperty]
     public ScopeFactory ScopeFactory { get; set; }
+
     public IExpressionEvaluator Evaluator { get; internal set; }
 
-    internal readonly Queue<Scope> _scopeQueue = new Queue<Scope>();
-
-    public List<CompilerWarning> Warnings = new List<CompilerWarning>();
+    public List<CompilerWarning> Warnings { get; } = new List<CompilerWarning>();
 
     public bool ZpParse { get; set; }
 
     public bool NoStop { get; set; }
+    public bool StopNext { get; set; }
     public bool Breakpoint { get; set; }
     public bool Exception { get; set; }
 
     public uint GetDebugData()
     {
         var toReturn = (Breakpoint ? DebugConstants.Breakpoint : 0u) +
-                       (NoStop ? DebugConstants.NoStop : 0u) +
+                       (StopNext ? 0u : (NoStop ? DebugConstants.NoStop : 0u)) +
                        (Exception ? DebugConstants.Exception : 0u);
 
         Breakpoint = false;
         Exception = false;
+        StopNext = false;
 
         return toReturn;
     }
@@ -55,13 +56,9 @@ public class CompileState
         ScopeFactory = new ScopeFactory(Globals);
         Evaluator = new ExpressionEvaluator(this);
 
-        var segment = new Segment(Globals, true, 0x801, "Main", defaultFileName);
-        var scope = ScopeFactory.GetScope($"Main");
-        var procedure = segment.GetDefaultProcedure(scope);
-
-        Segments.Add(segment.Name, segment);
-        Segment = segment;
-        Scope = scope;
-        Procedure = procedure;
+        Segment = new Segment(Globals, true, 0x801, "Main", defaultFileName);
+        Segments.Add(Segment.Name, Segment);
+        Scope = ScopeFactory.GetScope($"Main");
+        Procedure = Segment.GetDefaultProcedure(this);
     }
 }

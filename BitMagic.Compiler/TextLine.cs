@@ -41,4 +41,8 @@ public class EmptyScope : IScope
     private readonly Variables EmptyVariables = new Variables("");
     public IVariables Variables => EmptyVariables;
     public string Name => "";
+
+    IScope IScope.Parent => null;
+    bool IScope.Anonymous => true;
+
 }

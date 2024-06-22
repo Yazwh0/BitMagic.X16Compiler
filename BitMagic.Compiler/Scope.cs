@@ -38,4 +38,8 @@ public class Scope : IScope
         Name = name;
         Variables = new Variables(globals, name);
     }
+
+    IScope IScope.Parent => null;
+    bool IScope.Anonymous => false;
+
 }

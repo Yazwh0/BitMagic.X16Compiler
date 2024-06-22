@@ -82,7 +82,7 @@ internal class CommanderX16R38Defaults : IVariables
         {"V_IFR", 0x9f0d },
         {"V_IER", 0x9f0e },
         {"V_ORA", 0x9f0f }
-    }.ToDictionary(i => i.Key, i => (IAsmVariable)(new AsmVariable { Name = i.Key, Value = i.Value, VariableType = VariableType.Ushort }));
+    }.ToDictionary(i => i.Key, i => (IAsmVariable)(new AsmVariable { Name = i.Key, Value = i.Value, VariableDataType = VariableDataType.Ushort }));
 
     public IReadOnlyDictionary<string, IAsmVariable> Values => _defaults;
 

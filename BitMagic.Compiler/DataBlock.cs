@@ -19,11 +19,11 @@ internal class DataBlock : IOutputData
     private readonly int _length;
     private readonly int _size;
     private readonly string _expression;
-    private readonly VariableType _type;
+    private readonly VariableDataType _type;
     private readonly IExpressionEvaluator _expressionEvaluator;
     private readonly Procedure _procedure;
 
-    internal DataBlock(int address, SourceFilePosition source, int length, VariableType type, string expression,
+    internal DataBlock(int address, SourceFilePosition source, int length, VariableDataType type, string expression,
         Procedure procedure, IExpressionEvaluator expressionEvaluator, bool canStep)
     {
         Address = address;
@@ -31,16 +31,16 @@ internal class DataBlock : IOutputData
         _length = length;
         _size = type switch
         {
-            VariableType.Byte => 1,
-            VariableType.Sbyte => 1,
-            VariableType.Short => 2,
-            VariableType.Ushort => 2,
-            VariableType.Int => 4,
-            VariableType.Uint => 4,
-            VariableType.Long => 8,
-            VariableType.Ulong => 8,
-            VariableType.FixedStrings => 1,
-            VariableType.ProcStart => 2,
+            VariableDataType.Byte => 1,
+            VariableDataType.Sbyte => 1,
+            VariableDataType.Short => 2,
+            VariableDataType.Ushort => 2,
+            VariableDataType.Int => 4,
+            VariableDataType.Uint => 4,
+            VariableDataType.Long => 8,
+            VariableDataType.Ulong => 8,
+            VariableDataType.FixedStrings => 1,
+            VariableDataType.ProcStart => 2,
             _ => throw new Exception($"Unhandled type {type}")
         };
         _expression = expression;
@@ -55,7 +55,7 @@ internal class DataBlock : IOutputData
         Data = new byte[_length * _size];
         DebugData = new uint[_length * _size];
 
-        if (_type == VariableType.FixedStrings)
+        if (_type == VariableDataType.FixedStrings)
         {
             RequiresReval = false;
             for (var i = 0; i < _length; i++)

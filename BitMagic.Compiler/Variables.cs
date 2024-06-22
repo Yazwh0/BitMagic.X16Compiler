@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 
 namespace BitMagic.Compiler;
 
@@ -87,7 +86,7 @@ public class Variables : IVariables
         var regexname = name;
         while (true)
         {
-            regexname = prev.Replace("::", ":.*:");
+            regexname = prev.Replace("::", ":[^:]*:");
             if (regexname == prev)
                 break;
 
@@ -133,7 +132,7 @@ public class Variables : IVariables
 
     public bool TryGetValue(int value, SourceFilePosition source, out IAsmVariable? result)
     {
-        foreach (var i in _variables.Where(i => i.Value.Value == value))
+        foreach (var i in _variables.Where(i => i.Value.Value == value && i.Value.VariableType == VariableType.CompileConstant))
         {
             result = i.Value;
             return true;
@@ -159,7 +158,7 @@ public class Variables : IVariables
 
     public IEnumerable<(string Name, IAsmVariable Value)> GetChildVariables(string prepend)
     {
-        foreach (var kv in _variables)
+        foreach (var kv in _variables.Where(i => i.Value.VariableType == VariableType.CompileConstant))
         {
             yield return ($"{prepend}:{kv.Key}", kv.Value);
         }
@@ -173,14 +172,28 @@ public class Variables : IVariables
         }
     }
 
-    public void SetValue(string name, int value, VariableType variableType, bool requiresReval, int length = 0, bool array = false,
+    public void SetDebuggerValue(string name, string expression, VariableDataType variableType, int length = 0, bool array = false)
+    {
+        var toAdd = new DebuggerVariable
+        {
+            Name = name,
+            Expression = expression,
+            VariableDataType = variableType,
+            Length = length,
+            Array = array
+        };
+
+        _variables[name] = toAdd;
+    }
+
+    public void SetValue(string name, int value, VariableDataType variableType, bool requiresReval, int length = 0, bool array = false,
         Func<bool, (int Value, bool RequiresReval)>? evaluate = null, SourceFilePosition? position = null)
     {
         var toAdd = new AsmVariable
         {
             Name = name,
             Value = value,
-            VariableType = variableType,
+            VariableDataType = variableType,
             Length = length,
             Array = array,
             RequiresReval = requiresReval,
@@ -190,7 +203,7 @@ public class Variables : IVariables
         if (evaluate != null)
             toAdd.Evaluate = evaluate;
 
-        if (variableType == VariableType.LabelPointer) // consider all labels to be ambiguous when creating
+        if (variableType == VariableDataType.LabelPointer) // consider all labels to be ambiguous when creating
         {
             _ambiguousVariables.Add(toAdd);
             return;

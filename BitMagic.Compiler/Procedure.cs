@@ -70,7 +70,7 @@ public class Procedure : IScope
         {
             var proc = new Procedure(name, this);
             _procedures.Add(name, proc);
-            Variables.SetValue(name, address, VariableType.ProcStart, false);
+            Variables.SetValue(name, address, VariableDataType.ProcStart, false);
         }
 
         return _procedures[name];
@@ -82,7 +82,7 @@ public class Procedure : IScope
         {
             var proc = new Procedure(scope, name, true, this);
             _procedures.Add(name, proc);
-            Variables.SetValue(name, address, VariableType.ProcStart, false);
+            Variables.SetValue(name, address, VariableDataType.ProcStart, false);
         }
 
         return _procedures[name];
@@ -102,4 +102,7 @@ public class Procedure : IScope
     }
 
     public IEnumerable<Procedure> Procedures => _procedures.Values;
+
+    IScope IScope.Parent => Parent;
+    bool IScope.Anonymous => Anonymous;
 }

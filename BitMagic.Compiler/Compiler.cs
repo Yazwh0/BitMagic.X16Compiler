@@ -48,7 +48,8 @@ public class Compiler
                 if (label == ".:")
                     throw new GeneralCompilerException(source, "Labels require a name. .: is not valid.");
 
-                state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableType.LabelPointer, false, position: source);
+
+                state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableDataType.LabelPointer, false, position: source);
             })
             //.WithParameters(".scopedelimiter",  (dict, state, source) =>
             //{
@@ -142,11 +143,11 @@ public class Compiler
                         segment.Filename = ":" + segment.Name; // todo: find a better way to inform the writer that this segment isn't to be written.
                 }
 
+                state.Segment = segment;
+
                 // if we're parsing ZP segmentents only, jump out
                 if (segment.StartAddress > 0x100 && state.ZpParse)
                     return;
-
-                state.Segment = segment;
 
                 var scopeName = "Main";
 
@@ -157,7 +158,7 @@ public class Compiler
                     scopeName = "Main";
 
                 state.Scope = state.ScopeFactory.GetScope(scopeName);
-                state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
+                state.Procedure = state.Segment.GetDefaultProcedure(state);
             }, new[] { "name", "address", "maxsize", "filename", "scope" })
             .WithParameters(".endsegment", (dict, state, source) =>
             {
@@ -167,7 +168,7 @@ public class Compiler
 
                 state.Segment = state.Segments["Main"];
                 state.Scope = state.ScopeFactory.GetScope("Main");
-                state.Procedure = state.Segment.GetDefaultProcedure(state.Scope);
+                state.Procedure = state.Segment.GetDefaultProcedure(state);
             })
             .WithParameters(".scope", (dict, state, source) =>
             {
@@ -175,10 +176,12 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
+                //state.Procedures.Push(state.Procedure);
+
                 string name = dict.ContainsKey("name") ? dict["name"] : $"Scope_{state.AnonCounter}";
                 state.Scope = state.ScopeFactory.GetScope(name);
 
-                state.Procedure = state.Segment.GetDefaultProcedure(state.Scope); // state.Procedure.GetProcedure($"{name}_Proc", state.Segment.Address, state.Scope);
+                state.Procedure = state.Segment.GetDefaultProcedure(state); // state.Procedure.GetProcedure($"{name}_Proc", state.Segment.Address, state.Scope);
                 state.AnonCounter++;
 
             }, new[] { "name" })
@@ -196,7 +199,7 @@ public class Compiler
                 var proc = state.Procedure.Parent;
                 if (proc == null)
                 {
-                    proc = state.Segment.GetDefaultProcedure(state.Scope);
+                    proc = state.Segment.GetDefaultProcedure(state);
                 }
 
                 state.Scope = proc.Scope;
@@ -221,7 +224,7 @@ public class Compiler
                     return;
 
                 if (!state.Procedure.Variables.HasValue("endproc"))
-                    state.Procedure.Variables.SetValue("endproc", state.Segment.Address, VariableType.ProcEnd, false, position: source);
+                    state.Procedure.Variables.SetValue("endproc", state.Segment.Address, VariableDataType.ProcEnd, false, position: source);
 
                 if (state.Procedure.Anonymous)
                     state.Warnings.Add(new EndProcOnAnonymousWarning(source));
@@ -229,13 +232,64 @@ public class Compiler
                 var proc = state.Procedure.Parent;
                 if (proc == null)
                 {
-                    proc = state.Segment.GetDefaultProcedure(state.Scope);
+                    proc = state.Segment.GetDefaultProcedure(state);
                     state.Warnings.Add(new UnmatchedEndProcWarning(source));
                 }
 
                 state.Scope = proc.Scope;
                 state.Procedure = proc;
             })
+            .WithAssignment(".debugalias", (dict, state, source) =>
+            {
+                // if we're parsing ZP segmentents only, jump out
+                if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
+                    return;
+
+                if (!dict.ContainsKey("type"))
+                    throw new UnknownDataTypeCompilerException(source, "Missing type");
+
+                var typenameResult = _variableType.Matches(dict["type"]);
+                if (typenameResult.Count == 0)
+                    throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
+
+                var match = typenameResult.First();
+
+                var typename = match.Groups["typename"].Value;
+                var sizeString = match.Groups["size"].Value;
+
+                if (string.IsNullOrWhiteSpace(typename))
+                    throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
+
+                typename = typename.ToLower();
+
+                int size = 0;
+                bool isArray = !string.IsNullOrWhiteSpace(sizeString);
+                if (isArray && !int.TryParse(sizeString, out size))
+                {
+                    throw new GeneralCompilerException(source, $"Cannot parse {sizeString} into a int");
+                }
+
+                // add the variable pointing at the data
+                var name = dict["name"];
+                var variableType = typename switch
+                {
+                    "byte" => VariableDataType.Byte,
+                    "sbyte" => VariableDataType.Sbyte,
+                    "short" => VariableDataType.Short,
+                    "ushort" => VariableDataType.Ushort,
+                    "int" => VariableDataType.Int,
+                    "uint" => VariableDataType.Uint,
+                    "long" => VariableDataType.Long,
+                    "ulong" => VariableDataType.Ulong,
+                    "proc" => VariableDataType.ProcStart,
+                    "string" => size == 0 ? VariableDataType.String : VariableDataType.FixedStrings,
+                    _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
+                };
+
+                size = size == 0 ? 1 : size;
+
+                state.Procedure.Variables.SetDebuggerValue(name, dict["value"], variableType, size, isArray);
+            }, true)
             .WithAssignment(".const", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
@@ -253,7 +307,7 @@ public class Compiler
 
                     var (address, requiresReval) = eval(false);
 
-                    state.Procedure.Variables.SetValue(dict["name"], address, VariableType.Constant, requiresReval, evaluate: eval, position: source);
+                    state.Procedure.Variables.SetValue(dict["name"], address, VariableDataType.Constant, requiresReval, evaluate: eval, position: source);
                     return;
                 }
 
@@ -263,7 +317,7 @@ public class Compiler
 
                     var (address, requiresReval) = eval(false);
 
-                    state.Procedure.Variables.SetValue(kv.Key, address, VariableType.Constant, requiresReval, evaluate: eval, position: source);
+                    state.Procedure.Variables.SetValue(kv.Key, address, VariableDataType.Constant, requiresReval, evaluate: eval, position: source);
                 }
             }, false)
             .WithAssignment(".constvar", (dict, state, source) =>
@@ -303,22 +357,24 @@ public class Compiler
                     value = dict["value"];
                 }
                 else
+                {
                     value = "0";
+                }
 
                 // add the variable pointing at the data
                 var name = dict["name"];
                 var variableType = typename switch
                 {
-                    "byte" => VariableType.Byte,
-                    "sbyte" => VariableType.Sbyte,
-                    "short" => VariableType.Short,
-                    "ushort" => VariableType.Ushort,
-                    "int" => VariableType.Int,
-                    "uint" => VariableType.Uint,
-                    "long" => VariableType.Long,
-                    "ulong" => VariableType.Ulong,
-                    "proc" => VariableType.ProcStart,
-                    "string" => size == 0 ? VariableType.String : VariableType.FixedStrings,
+                    "byte" => VariableDataType.Byte,
+                    "sbyte" => VariableDataType.Sbyte,
+                    "short" => VariableDataType.Short,
+                    "ushort" => VariableDataType.Ushort,
+                    "int" => VariableDataType.Int,
+                    "uint" => VariableDataType.Uint,
+                    "long" => VariableDataType.Long,
+                    "ulong" => VariableDataType.Ulong,
+                    "proc" => VariableDataType.ProcStart,
+                    "string" => size == 0 ? VariableDataType.String : VariableDataType.FixedStrings,
                     _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                 };
 
@@ -377,16 +433,16 @@ public class Compiler
                 var name = dict["name"];
                 var variableType = typename switch
                 {
-                    "byte" => VariableType.Byte,
-                    "sbyte" => VariableType.Sbyte,
-                    "short" => VariableType.Short,
-                    "ushort" => VariableType.Ushort,
-                    "int" => VariableType.Int,
-                    "uint" => VariableType.Uint,
-                    "long" => VariableType.Long,
-                    "ulong" => VariableType.Ulong,
-                    "string" => VariableType.FixedStrings,
-                    "proc" => VariableType.ProcStart,
+                    "byte" => VariableDataType.Byte,
+                    "sbyte" => VariableDataType.Sbyte,
+                    "short" => VariableDataType.Short,
+                    "ushort" => VariableDataType.Ushort,
+                    "int" => VariableDataType.Int,
+                    "uint" => VariableDataType.Uint,
+                    "long" => VariableDataType.Long,
+                    "ulong" => VariableDataType.Ulong,
+                    "string" => VariableDataType.FixedStrings,
+                    "proc" => VariableDataType.ProcStart,
                     _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                 };
                 state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray, position: source);
@@ -457,16 +513,16 @@ public class Compiler
                 var name = dict["name"];
                 var variableType = typename switch
                 {
-                    "byte" => VariableType.Byte,
-                    "sbyte" => VariableType.Sbyte,
-                    "short" => VariableType.Short,
-                    "ushort" => VariableType.Ushort,
-                    "int" => VariableType.Int,
-                    "uint" => VariableType.Uint,
-                    "long" => VariableType.Long,
-                    "ulong" => VariableType.Ulong,
-                    "string" => VariableType.FixedStrings,
-                    "proc" => VariableType.ProcStart,
+                    "byte" => VariableDataType.Byte,
+                    "sbyte" => VariableDataType.Sbyte,
+                    "short" => VariableDataType.Short,
+                    "ushort" => VariableDataType.Ushort,
+                    "int" => VariableDataType.Int,
+                    "uint" => VariableDataType.Uint,
+                    "long" => VariableDataType.Long,
+                    "ulong" => VariableDataType.Ulong,
+                    "string" => VariableDataType.FixedStrings,
+                    "proc" => VariableDataType.ProcStart,
                     _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                 };
 
@@ -474,16 +530,16 @@ public class Compiler
 
                 var length = variableType switch
                 {
-                    VariableType.Byte => 1,
-                    VariableType.Sbyte => 1,
-                    VariableType.Short => 2,
-                    VariableType.Ushort => 2,
-                    VariableType.Int => 4,
-                    VariableType.Uint => 4,
-                    VariableType.Long => 8,
-                    VariableType.Ulong => 8,
-                    VariableType.FixedStrings => 1,
-                    VariableType.ProcStart => 2,
+                    VariableDataType.Byte => 1,
+                    VariableDataType.Sbyte => 1,
+                    VariableDataType.Short => 2,
+                    VariableDataType.Ushort => 2,
+                    VariableDataType.Int => 4,
+                    VariableDataType.Uint => 4,
+                    VariableDataType.Long => 8,
+                    VariableDataType.Ulong => 8,
+                    VariableDataType.FixedStrings => 1,
+                    VariableDataType.ProcStart => 2,
                     _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {variableType}")
                 };
 
@@ -633,7 +689,15 @@ public class Compiler
                 else
                     throw new NoStopCannotParseEnabledException(source, $"cannot parse {dict["enabled"]} into true or false.");
 
-            }, new[] { "enabled" });
+            }, new[] { "enabled" })
+            .WithParameters(".stop", (dict, state, source) =>
+            {
+                // if we're parsing ZP segmentents only, jump out
+                if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
+                    return;
+
+                state.StopNext = true;
+            });
 
     public async Task<CompileResult> Compile()
     {
@@ -714,7 +778,7 @@ public class Compiler
 
         foreach (var kv in _project.Machine.Variables.Values)
         {
-            state.Globals.SetValue(kv.Key, kv.Value.Value, kv.Value.VariableType, false, kv.Value.Length, kv.Value.Array);
+            state.Globals.SetValue(kv.Key, kv.Value.Value, kv.Value.VariableDataType, false, kv.Value.Length, kv.Value.Array);
         }
     }
 

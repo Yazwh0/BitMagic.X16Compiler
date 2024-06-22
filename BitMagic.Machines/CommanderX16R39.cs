@@ -222,7 +222,7 @@ namespace BitMagic.Machines
             {"UNTLK", 0xFFAB},
             {"extapi", 0xFEAB }
 
-        }.ToDictionary(i => i.Key, i => (IAsmVariable)(new AsmVariable { Name = i.Key, Value = i.Value, VariableType = VariableType.Ushort }));
+        }.ToDictionary(i => i.Key, i => (IAsmVariable)(new AsmVariable { Name = i.Key, Value = i.Value, VariableDataType = VariableDataType.Ushort }));
 
         public IReadOnlyDictionary<string, IAsmVariable> Values => _defaults;
         public IList<IAsmVariable> AmbiguousVariables => Array.Empty<IAsmVariable>();
