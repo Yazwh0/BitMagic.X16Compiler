@@ -860,6 +860,10 @@ public class Compiler
             }
 
             state.ZpParse = false;
+            state.Segment = state.Segments["Main"];
+            state.Procedure = state.Segment.GetDefaultProcedure(state);
+            state.Scope = state.ScopeFactory.GetScope("Main");
+
             lineNumber = 0;
             previousLines.Clear();
         }
