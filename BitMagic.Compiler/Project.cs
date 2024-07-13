@@ -104,4 +104,16 @@ public class CompileOptions
     [JsonProperty("binFolder", DefaultValueHandling = DefaultValueHandling.Ignore)]
     [Description("Bin folder for the dlls.")]
     public string BinFolder { get; set; } = "";
+
+    [JsonProperty("saveGeneratedBmasm", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Save Generated BMASM files in the bin folder.")]
+    public bool SaveGeneratedBmasm { get; set; } = true;
+
+    [JsonProperty("saveGeneratedTemplate", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Save Generated Template C# files in the bin folder.")]
+    public bool SaveGeneratedTemplate { get; set; } = false;
+
+    [JsonProperty("savePreGeneratedTemplate", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Save Generated Pre-Template cp,bomed BMASM \\ C# files in the bin folder.")]
+    public bool SavePreGeneratedTemplate { get; set; } = false;
 }
