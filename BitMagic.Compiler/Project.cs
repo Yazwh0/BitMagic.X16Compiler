@@ -114,6 +114,6 @@ public class CompileOptions
     public bool SaveGeneratedTemplate { get; set; } = false;
 
     [JsonProperty("savePreGeneratedTemplate", DefaultValueHandling = DefaultValueHandling.Ignore)]
-    [Description("Save Generated Pre-Template cp,bomed BMASM \\ C# files in the bin folder.")]
+    [Description("Save Generated Pre-Template BMASM \\ C# files in the bin folder.")]
     public bool SavePreGeneratedTemplate { get; set; } = false;
 }
