@@ -839,15 +839,21 @@ public class Compiler
                     continue;
                 }
 
+                var process = (state.ZpParse && state.Segment.StartAddress < 0x100) || (!state.ZpParse && state.Segment.StartAddress >= 0x100);
+
                 if (thisLine.StartsWith('.'))
                 {
-                    previousLines.Clear();
-                    var source = new SourceFilePosition { LineNumber = lineNumber, Source = thisLine, Name = _project.Code.Name, SourceFile = _project.Code };
-                    ParseCommand(source, state);
+                    var addsData = thisLine.StartsWith(".byte", StringComparison.OrdinalIgnoreCase) || thisLine.StartsWith(".word", StringComparison.OrdinalIgnoreCase);
+                    if (addsData && process || !addsData)
+                    {
+                        previousLines.Clear();
+                        var source = new SourceFilePosition { LineNumber = lineNumber, Source = thisLine, Name = _project.Code.Name, SourceFile = _project.Code };
+                        ParseCommand(source, state);
+                    }
                 }
                 else
                 {
-                    if ((state.ZpParse && state.Segment.StartAddress < 0x100) || (!state.ZpParse && state.Segment.StartAddress >= 0x100))
+                    if (process)
                     {
                         var parts = thisLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
