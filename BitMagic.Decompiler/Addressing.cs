@@ -373,6 +373,8 @@ public static class OpCodes
         0x9A => ("TXS", AddressMode.Implied),
         0x98 => ("TYA", AddressMode.Implied),
         0xCB => ("WAI", AddressMode.Implied),
+        0xDC => ("LDD", AddressMode.Absolute),
+        0xFC => ("LDD", AddressMode.Absolute),
         _ => ("", (Addressing.AddressMode)(-1))
     };
 }

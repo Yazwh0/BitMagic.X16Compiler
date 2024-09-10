@@ -136,7 +136,8 @@ public class WDC65c02 : I6502
         new Smb5(),
         new Smb6(),
         new Smb7(),
-        new Wai()
+        new Wai(),
+        new Ldd()
     };
 
     private readonly (CpuOpCode operation, AccessMode Mode, int Timing)?[] _operations;
@@ -471,6 +472,15 @@ public class Lda : CpuOpCode
     };
 }
 
+public class Ldd : CpuOpCode
+{
+    internal override List<(uint OpCode, AccessMode Mode, int Timing)> OpCodes => new()
+    {
+        (0xdc, AccessMode.Absolute, 4),
+        (0xfc, AccessMode.Absolute, 4)
+    };
+}
+
 public class Ldx : CpuOpCode
 {
     internal override List<(uint OpCode, AccessMode Mode, int Timing)> OpCodes => new()
@@ -702,7 +712,7 @@ public class Txs : CpuOpCode
     internal override List<(uint OpCode, AccessMode Mode, int Timing)> OpCodes => new()
     {
         (0x9a, AccessMode.Implied, 2),
-    };        
+    };
 }
 
 public class Tsx : CpuOpCode
@@ -816,7 +826,7 @@ public class Bbr1 : BbBase
 }
 
 public class Bbr2 : BbBase
-{ 
+{
     internal override List<(uint OpCode, AccessMode Mode, int Timing)> OpCodes => new()
     {
         (0x2f, AccessMode.ZerpPageRel, 5),
