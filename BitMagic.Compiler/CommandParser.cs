@@ -9,9 +9,9 @@ namespace BitMagic.Compiler;
 
 internal class CommandParser
 {
-    private Regex _firstWord = new Regex("^\\s*(?<result>([.][\\w\\-:]+))(?<line>(.*))$");
+    private readonly Regex _firstWord = new Regex("^\\s*(?<result>([.][\\w\\-:]+))(?<line>(.*))$", RegexOptions.Compiled);
 
-    private Dictionary<string, Action<SourceFilePosition, CompileState, string>> _lineProcessor = new Dictionary<string, Action<SourceFilePosition, CompileState, string>>();
+    private readonly Dictionary<string, Action<SourceFilePosition, CompileState, string>> _lineProcessor = new ();
     private Action<string, CompileState, SourceFilePosition>? _labelProcessor;
 
     private CommandParser()

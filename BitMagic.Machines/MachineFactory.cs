@@ -14,7 +14,12 @@ public enum Machine
     CommanderX16R41,
     CommanderX16R42,
     CommanderX16R43,
-    CommanderX16R44
+    CommanderX16R44,
+    CommanderX16R45,
+    CommanderX16R46,
+    CommanderX16R47,
+    CommanderX16R48,
+    CommanderX16
 }
 
 public static class MachineFactory
@@ -35,6 +40,11 @@ public static class MachineFactory
         Machine.CommanderX16R42 => new CommanderX16R39(),
         Machine.CommanderX16R43 => new CommanderX16R39(),
         Machine.CommanderX16R44 => new CommanderX16R39(),
+        Machine.CommanderX16R45 => new CommanderX16R39(),
+        Machine.CommanderX16R46 => new CommanderX16R39(),
+        Machine.CommanderX16R47 => new CommanderX16R39(),
+        Machine.CommanderX16R48 => new CommanderX16R39(),
+        Machine.CommanderX16 => new CommanderX16R39(),
         _ => null
     };
 }

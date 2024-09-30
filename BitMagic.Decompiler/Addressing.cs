@@ -74,7 +74,7 @@ public static class Addressing
         AddressMode.Absolute => $"${value:X4}",
         AddressMode.XIndexAbsolute => $"${value:X4}",
         AddressMode.YIndexAbsolute => $"${value:X4}",
-        AddressMode.AbsoluteIndirect => $"(${value:X4})",
+        AddressMode.AbsoluteIndirect => $"${value:X4}",
         AddressMode.AbsoluteXIndexIndirect => $"${value:X4}",
         AddressMode.ZeroPage => $"${value & 0xff:X2}",
         AddressMode.XIndexedZeroPage => $"${value & 0xff:X2}",
