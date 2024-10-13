@@ -26,6 +26,7 @@ public class Compiler
     public Compiler(Project project, IEmulatorLogger logger)
     {
         _project = project;
+
         _commandParser = CreateParser();
         _logger = logger;
     }
@@ -33,6 +34,7 @@ public class Compiler
     public Compiler(string code, IEmulatorLogger logger)
     {
         _project = new Project();
+
         _project.Code = new StaticTextFile(code);
         _commandParser = CreateParser();
         _logger = logger;
@@ -1090,7 +1092,10 @@ public class Compiler
     private void ParseAsm(string[] parts, SourceFilePosition source, CompileState state)
     {
         if (_project.Machine == null)
-            throw new MachineNotSetException();
+        {
+            _project.Machine = MachineFactory.GetMachine(Machine.CommanderX16);
+            InitFromMachine(state);
+        }
 
         var code = parts[0].ToLower();
 
