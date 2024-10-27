@@ -83,9 +83,20 @@ namespace BitMagic.Compiler
             }
             _variables = variables;
             _requiresReval = false;
+            int result = 0;
             _evaluator.PreEvaluateVariable += _evaluator_PreEvaluateVariable;
-            var result = (int)_evaluator.Evaluate(expression);
-            _evaluator.PreEvaluateVariable -= _evaluator_PreEvaluateVariable;
+            try
+            {
+                result = (int)_evaluator.Evaluate(expression);
+            }
+            catch (Exception e)
+            {
+                throw new ExpressionException(source, e.Message);
+            }
+            finally
+            {
+                _evaluator.PreEvaluateVariable -= _evaluator_PreEvaluateVariable;
+            }
 
             return new(result, _requiresReval);
         }
