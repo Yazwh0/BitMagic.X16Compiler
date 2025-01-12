@@ -109,6 +109,7 @@ namespace BitMagic.Compiler
             if (_variables.TryGetValue(e.Name, _source, out var result))
             {
                 e.Value = result.Value;
+                _requiresReval |= result.RequiresReval;
                 //_requiresReval |= false;
             }
             else

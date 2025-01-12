@@ -11,6 +11,7 @@ using BitMagic.Compiler.Exceptions;
 using BitMagic.Compiler.Warnings;
 using System.Text.RegularExpressions;
 using BitMagic.Compiler.Files;
+using System.Net.Http.Headers;
 
 namespace BitMagic.Compiler;
 
@@ -1040,9 +1041,14 @@ public class Compiler
                 throw new Exception($"cannot evaluate {i.Name}, no sourec file position?!");
             }
             else if (r.RequiresReval)
+            {
                 toReturn++;
+            }
             else
+            {
                 variable.Value = r.Value;
+                variable.RequiresReval = false;
+            }
         }
 
         foreach (var segment in state.Segments.Values)
@@ -1059,6 +1065,8 @@ public class Compiler
     private int RevalProc(Procedure proc, bool showRevaluations, bool throwOnReval)
     {
         var toReturn = 0;
+
+        // Variables have been updated by this point.
 
         foreach (var line in proc.Data.Where(l => l.RequiresReval))
         {
