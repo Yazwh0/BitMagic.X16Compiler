@@ -1038,7 +1038,7 @@ public class Compiler
                 if (variable.SourceFilePosition != null)
                     throw new UnknownConstantException(variable.SourceFilePosition, $"Cannot evaluate '{variable.SourceFilePosition.Source}'.");
 
-                throw new Exception($"cannot evaluate {i.Name}, no sourec file position?!");
+                throw new Exception($"cannot evaluate {i.Name}, no source file position?!");
             }
             else if (r.RequiresReval)
             {
