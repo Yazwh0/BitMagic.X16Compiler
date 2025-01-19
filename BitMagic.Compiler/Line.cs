@@ -28,6 +28,7 @@ public class Line : IOutputData
 
     private readonly ICpu _cpu;
     private readonly IExpressionEvaluator _expressionEvaluator;
+    private readonly CompileState _state;
 
     internal Line(ICpuOpCode opCode, SourceFilePosition source, Procedure proc, ICpu cpu, IExpressionEvaluator expressionEvaluator, int address, string[] parts, CompileState state)
     {
@@ -41,6 +42,7 @@ public class Line : IOutputData
         Address = address;
         Source = source;
         _debugData = state.GetDebugData();
+        _state = state;
     }
 
     private IEnumerable<byte> IntToByteArray(uint i)
@@ -75,11 +77,26 @@ public class Line : IOutputData
     {
         //var allPossible = _cpu.ParameterDefinitions.Where(i => i.Value.Valid(Params) && i.Value.HasTemplate).OrderBy(i => i.Value.Order).ToList();
 
+        // check if the params have a label
+        var thisParams = Params;
+        List<string>? labels = null;
+        var idx = thisParams.IndexOf(':');
+
+        if (idx != -1)
+            labels = new List<string>();
+
+        while (idx != -1)
+        {
+            labels.Add(thisParams[..idx]); // removes :
+            thisParams = thisParams[(idx + 1)..];
+            idx = thisParams.IndexOf(':');
+        }
+
         foreach (var i in _opCode.Modes.Where(i => _cpu.ParameterDefinitions.ContainsKey(i)).Select(i => _cpu.ParameterDefinitions[i]).OrderBy(i => i.Order))
         {
             try
             {
-                var compileResult = i.Compile(Params, this, _opCode, _expressionEvaluator, Procedure.Variables, finalParse);
+                var compileResult = i.Compile(thisParams, this, _opCode, _expressionEvaluator, Procedure.Variables, finalParse);
                 if (compileResult.Data != null)
                 {
                     RequiresReval = compileResult.RequiresRecalc;
@@ -98,10 +115,36 @@ public class Line : IOutputData
                     if (currentLength != 0 && currentLength != Data.Length)
                         throw new CannotCompileException(this, $"Fatal error. While parsing '{_toParse}' the opcode data length has changed.");
 
+                    if (labels != null)
+                    {
+                        if (Data.Length <= 1)
+                            throw new LabelOutOfBoundsException(this, "Cannot apply inline labels to a opcode that doesn't have parameters.");
+
+                        foreach (var l in labels.Select(l => l.Trim()))
+                        {
+                            if (l.StartsWith('<'))
+                            {
+                                _state.Procedure.Variables.SetValue(l[1..], Address + 1, VariableDataType.Byte, false, position: Source);
+                            }
+                            else if (l.StartsWith('>'))
+                            {
+                                if (Data.Length < 2)
+                                    throw new LabelOutOfBoundsException(this, "Cannot use '>' to define a inline label for a opcode that takes a byte.");
+
+                                _state.Procedure.Variables.SetValue(l[1..], Address + 3, VariableDataType.Byte, false, position: Source);
+                            }
+                            else
+                            {
+                                var destType = Data.Length <= 2 ? VariableDataType.Byte : VariableDataType.Ushort;
+                                _state.Procedure.Variables.SetValue(l, Address + 1, destType, false, position: Source);
+                            }
+                        }
+                    }
+
                     return;
                 }
-            } 
-            catch(ExpressionEvaluatorSyntaxErrorException ex)
+            }
+            catch (ExpressionEvaluatorSyntaxErrorException ex)
             {
                 throw new UnknownSymbolException(this, ex.Message);
             }
@@ -116,3 +159,5 @@ public class Line : IOutputData
         logger.LogLine($"{_opCode.Code}\t{Params}");
     }
 }
+
+public class LabelOutOfBoundsException(IOutputData line, string message) : CompilerLineException(line, message);

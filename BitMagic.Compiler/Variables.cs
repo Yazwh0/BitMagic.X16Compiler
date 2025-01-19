@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 
 namespace BitMagic.Compiler;
@@ -189,6 +190,7 @@ public class Variables : IVariables
     public void SetValue(string name, int value, VariableDataType variableType, bool requiresReval, int length = 0, bool array = false,
         Func<bool, (int Value, bool RequiresReval)>? evaluate = null, SourceFilePosition? position = null)
     {
+        name = name.Trim();
         var toAdd = new AsmVariable
         {
             Name = name,
