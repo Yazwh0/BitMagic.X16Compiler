@@ -31,6 +31,11 @@ namespace BitMagic.Compiler
         public (int Result, bool RequiresRecalc) Evaluate(string expression, SourceFilePosition source, IVariables variables, int address, bool final)
         {
             _source = source;
+
+            // if the experssion is only relative moves, then append the default value
+            if (expression.All(i => i == '+' || i == '-'))
+                expression += Compiler.AnonymousLabel;
+
             // first check its not a relative label
             if (expression[0] is '-' or '+')
             {

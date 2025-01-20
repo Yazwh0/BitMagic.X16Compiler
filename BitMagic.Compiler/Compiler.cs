@@ -12,6 +12,7 @@ using BitMagic.Compiler.Warnings;
 using System.Text.RegularExpressions;
 using BitMagic.Compiler.Files;
 using System.Net.Http.Headers;
+using System.ComponentModel;
 
 namespace BitMagic.Compiler;
 
@@ -21,7 +22,7 @@ public class Compiler
     private readonly Dictionary<string, ICpuOpCode> _opCodes = new Dictionary<string, ICpuOpCode>();
     private readonly CommandParser _commandParser;
     private readonly IEmulatorLogger _logger;
-
+    public static readonly string AnonymousLabel = "_";
     private static Regex _variableType = new Regex("(?<typename>(?i:byte|sbyte|short|ushort|int|uint|long|ulong|string|proc))(\\[(?<size>\\d+)\\])?", RegexOptions.Compiled);
 
     public Compiler(Project project, IEmulatorLogger logger)
@@ -48,11 +49,15 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                if (label == ".:")
-                    throw new GeneralCompilerException(source, "Labels require a name. .: is not valid.");
+                var l = label[1..^1].Trim();
 
+                if (l.Contains(' '))
+                    throw new GeneralCompilerException(source, "Labels cannot contain a space.");
 
-                state.Procedure.Variables.SetValue(label[1..^1], state.Segment.Address, VariableDataType.LabelPointer, false, position: source);
+                if (string.IsNullOrWhiteSpace(l))
+                    l = AnonymousLabel;
+
+                state.Procedure.Variables.SetValue(l, state.Segment.Address, VariableDataType.LabelPointer, false, position: source);
             })
             //.WithParameters(".scopedelimiter",  (dict, state, source) =>
             //{
@@ -636,7 +641,7 @@ public class Compiler
 
                 if (!File.Exists(filename))
                     return;
-                    //throw new MapFileNotFoundException(source, $"Map file '${filename}' doesn't exist");
+                //throw new MapFileNotFoundException(source, $"Map file '${filename}' doesn't exist");
 
                 int index = 0;
                 foreach (var i in source.SourceFile.Parents)
@@ -844,7 +849,11 @@ public class Compiler
 
                 var process = (state.ZpParse && state.Segment.StartAddress < 0x100) || (!state.ZpParse && state.Segment.StartAddress >= 0x100);
 
-                if (thisLine.StartsWith('.'))
+                var addAnonymous = thisLine.StartsWith(".:");   // special case it should do both command asm!;
+                var doCommand = !addAnonymous && thisLine.StartsWith('.');
+                var doAsm = !doCommand;
+
+                if (doCommand)
                 {
                     var addsData = thisLine.StartsWith(".byte", StringComparison.OrdinalIgnoreCase) || thisLine.StartsWith(".word", StringComparison.OrdinalIgnoreCase);
                     if (addsData && process || !addsData)
@@ -854,14 +863,21 @@ public class Compiler
                         ParseCommand(source, state);
                     }
                 }
-                else
+
+                if (doAsm)
                 {
                     if (process)
                     {
-                        var parts = thisLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-
                         previousLines.AppendLine(line);
                         var source = new SourceFilePosition { LineNumber = lineNumber, Source = previousLines.ToString(), Name = _project.Code.Name, SourceFile = _project.Code };
+
+                        if (addAnonymous)
+                        {
+                            state.Procedure.Variables.SetValue(AnonymousLabel, state.Segment.Address, VariableDataType.LabelPointer, false, position: source);
+                            thisLine = thisLine[2..].Trim();
+                        }
+
+                        var parts = thisLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
                         ParseAsm(parts, source, state);
                         previousLines.Clear();
                     }
