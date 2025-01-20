@@ -36,7 +36,7 @@ public class Line : IOutputData
         _expressionEvaluator = expressionEvaluator;
         Procedure = proc;
         _opCode = opCode;
-        _toParse = string.Concat(parts).Replace(" ", "");
+        _toParse = string.Concat(parts); 
         _original = _toParse;
         Params = _toParse;
         Address = address;
@@ -80,7 +80,7 @@ public class Line : IOutputData
         // check if the params have a label
         var thisParams = Params;
         List<string>? labels = null;
-        var idx = thisParams.IndexOf(':');
+        var idx = thisParams.IndexOf(": ");
 
         if (idx != -1)
             labels = new List<string>();
@@ -91,6 +91,8 @@ public class Line : IOutputData
             thisParams = thisParams[(idx + 1)..];
             idx = thisParams.IndexOf(':');
         }
+
+        thisParams = thisParams.Replace(" ", "");
 
         foreach (var i in _opCode.Modes.Where(i => _cpu.ParameterDefinitions.ContainsKey(i)).Select(i => _cpu.ParameterDefinitions[i]).OrderBy(i => i.Order))
         {
