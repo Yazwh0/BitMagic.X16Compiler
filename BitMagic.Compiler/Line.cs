@@ -133,7 +133,7 @@ public class Line : IOutputData
                                 if (Data.Length < 2)
                                     throw new LabelOutOfBoundsException(this, "Cannot use '>' to define a inline label for a opcode that takes a byte.");
 
-                                _state.Procedure.Variables.SetValue(l[1..], Address + 3, VariableDataType.Byte, false, position: Source);
+                                _state.Procedure.Variables.SetValue(l[1..], Address + 2, VariableDataType.Byte, false, position: Source);
                             }
                             else
                             {
