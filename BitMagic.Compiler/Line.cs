@@ -36,7 +36,7 @@ public class Line : IOutputData
         _expressionEvaluator = expressionEvaluator;
         Procedure = proc;
         _opCode = opCode;
-        _toParse = string.Concat(parts); 
+        _toParse = string.Join(' ', parts);
         _original = _toParse;
         Params = _toParse;
         Address = address;
