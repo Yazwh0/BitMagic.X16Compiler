@@ -878,8 +878,11 @@ public class Compiler
                         }
 
                         var parts = thisLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                        ParseAsm(parts, source, state);
-                        previousLines.Clear();
+                        if (parts.Length != 0)
+                        {
+                            ParseAsm(parts, source, state);
+                            previousLines.Clear();
+                        }
                     }
                 }
             }
