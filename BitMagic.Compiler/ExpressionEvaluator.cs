@@ -92,7 +92,20 @@ namespace BitMagic.Compiler
             _evaluator.PreEvaluateVariable += _evaluator_PreEvaluateVariable;
             try
             {
-                result = (int)_evaluator.Evaluate(expression);
+                var returnObj = _evaluator.Evaluate(expression);
+
+                if (returnObj is char chr)
+                {
+                    result = (byte)chr;
+                }
+                else if (returnObj is bool bol)
+                {
+                    result = bol ? 1 : 0;
+                }
+                else
+                {
+                    result = (int)returnObj;
+                }
             }
             catch (Exception e)
             {
