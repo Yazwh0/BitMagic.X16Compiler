@@ -108,7 +108,6 @@ public class Compiler
                 else
                 {
                     segment = new Segment(state.Globals, dict["name"]);
-                    state.Segments.Add(dict["name"], segment);
                     newSegment = true;
                 }
 
@@ -129,6 +128,14 @@ public class Compiler
 
                     segment.Address = address;
                     segment.StartAddress = segment.Address;
+                }
+                else
+                {
+                    if (newSegment)
+                    {
+                        segment.Address = state.Segment.Address; // continue from the current segment
+                        segment.StartAddress = segment.Address;
+                    }
                 }
 
                 if (dict.ContainsKey("maxsize"))
@@ -156,6 +163,11 @@ public class Compiler
                 // if we're parsing ZP segmentents only, jump out
                 if (segment.StartAddress > 0x100 && state.ZpParse)
                     return;
+
+                if (newSegment)
+                {
+                    state.Segments.Add(dict["name"], segment);
+                }
 
                 var scopeName = "Main";
 
