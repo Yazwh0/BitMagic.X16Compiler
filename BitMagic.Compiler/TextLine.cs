@@ -9,7 +9,7 @@ public class TextLine : IOutputData
     public byte[] Data => Array.Empty<byte>();
     public uint[] DebugData => Array.Empty<uint>();
 
-    public int Address => 0;
+    public int Address { get; set; } = 0;
 
     public bool RequiresReval => false;
 

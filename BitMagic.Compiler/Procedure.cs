@@ -101,6 +101,19 @@ public class Procedure : IScope
         }
     }
 
+    public void Relocate(int delta)
+    {
+        foreach (var data in Data)
+        {
+            data.Address += delta;
+        }
+
+        foreach (var p in _procedures.Values)
+        {
+            p.Relocate(delta);
+        }
+    }
+
     public IEnumerable<Procedure> Procedures => _procedures.Values;
 
     IScope IScope.Parent => Parent;

@@ -9,7 +9,7 @@ internal class DataBlock : IOutputData
 {
     public byte[] Data { get; private set; } = new byte[] { };
     public uint[] DebugData { get; private set; } = new uint[] { };
-    public int Address { get; }
+    public int Address { get; set; }
     public bool RequiresReval { get; private set; }
     public List<string> RequiresRevalNames { get; } = new List<string>();
     public SourceFilePosition Source { get; }

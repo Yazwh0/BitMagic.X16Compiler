@@ -22,7 +22,7 @@ public class Line : IOutputData
     private string _original { get; set; }
     public SourceFilePosition Source { get; }
     public string Params { get; }
-    public int Address { get; }
+    public int Address { get; set; }
     public bool CanStep => true;
     public IScope Scope => Procedure;
 
