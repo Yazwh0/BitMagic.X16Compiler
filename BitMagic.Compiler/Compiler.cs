@@ -951,6 +951,11 @@ public class Compiler
             // main output
             if (string.IsNullOrWhiteSpace(filename))
             {
+                if (!segments.SelectMany(i => i.DefaultProcedure.Values).Any(i => i.Data.Any()))
+                {
+                    continue;
+                }
+
                 header = string.IsNullOrWhiteSpace(_project.OutputFile.Filename) || _project.OutputFile.Filename.EndsWith(".prg", StringComparison.OrdinalIgnoreCase);
                 thisFilename = $"{Path.GetFileNameWithoutExtension(_project.Code.Name).Replace(".generated", "")}.prg";
                 segments.First().Filename = thisFilename;
