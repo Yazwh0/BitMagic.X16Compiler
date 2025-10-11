@@ -717,7 +717,8 @@ public class Compiler
                     return;
 
                 state.StopNext = true;
-            });
+            })            
+            ;
 
     public async Task<CompileResult> Compile()
     {

@@ -31,6 +31,7 @@ namespace BitMagic.Machines
             {"IEN", 0x9F26},
             {"ISR", 0x9F27},
             {"IRQLINE_L", 0x9F28},
+            {"SCANLINE_L", 0x9F28},
             {"DC_VIDEO", 0x9F29},
             {"DC_HSCALE", 0x9F2A},
             {"DC_VSCALE", 0x9F2B},
