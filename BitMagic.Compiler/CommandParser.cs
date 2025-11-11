@@ -110,9 +110,19 @@ internal class CommandParser
 
         if (hasType)
         {
-            paramDict.Add("type", rawParams[..idx].Trim());
+            var toAdd = rawParams[..idx].Trim();
             rawParams = rawParams[idx..].Trim();
             idx = rawParams.IndexOf(' ');
+
+            if (idx != -1 && rawParams[..idx].Trim() == "ptr")
+            {
+                toAdd += " ptr";
+
+                rawParams = rawParams[idx..].Trim();
+                idx = rawParams.IndexOf(' ');
+            }
+
+            paramDict.Add("type", toAdd);
         }
 
         if (idx == -1)

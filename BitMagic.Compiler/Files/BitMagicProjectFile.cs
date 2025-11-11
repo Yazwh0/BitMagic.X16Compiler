@@ -1,7 +1,6 @@
 ﻿using BitMagic.Common;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 
 namespace BitMagic.Compiler.Files;
@@ -39,7 +38,9 @@ public class BitMagicProjectFile : SourceFileBase
         if (string.IsNullOrWhiteSpace(Path))
             throw new BitMagicProjectFileNotInitialised("Path not set");
 
-        Content = (await File.ReadAllTextAsync(Path)).Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        Content = await DocumentCache.Instance.ReadAllTextAsync(Path);
+
+//        Content = (await File.ReadAllTextAsync(Path)).Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
     }
 
     public Task Save(string filename)
@@ -54,7 +55,8 @@ public class BitMagicProjectFile : SourceFileBase
         if (string.IsNullOrWhiteSpace(Path))
             throw new BitMagicProjectFileNotInitialised("Path not set");
 
-        await File.WriteAllLinesAsync(Path, Content);
+        await DocumentCache.Instance.WriteAllLinesAsync(Path, Content);
+        //await File.WriteAllLinesAsync(Path, Content);
     }
 
     public override Task UpdateContent() => Load();

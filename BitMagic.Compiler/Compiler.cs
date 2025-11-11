@@ -23,7 +23,7 @@ public class Compiler
     private readonly CommandParser _commandParser;
     private readonly IEmulatorLogger _logger;
     public static readonly string AnonymousLabel = "_";
-    private static Regex _variableType = new Regex("(?<typename>(?i:byte|sbyte|short|ushort|int|uint|long|ulong|string|proc))(\\[(?<size>\\d+)\\])?", RegexOptions.Compiled);
+    private static Regex _variableType = new Regex("(?<typename>(?i:byte|sbyte|short|ushort|int|uint|long|ulong|string|proc|ptr))(\\[(?<size>\\d+)\\])?(?:\\s+(?<modifier>ptr))?", RegexOptions.Compiled);
 
     public Compiler(Project project, IEmulatorLogger logger)
     {
@@ -276,6 +276,7 @@ public class Compiler
 
                 var typename = match.Groups["typename"].Value;
                 var sizeString = match.Groups["size"].Value;
+                var ptr = match.Groups["modifier"].Value;
 
                 if (string.IsNullOrWhiteSpace(typename))
                     throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
@@ -291,7 +292,7 @@ public class Compiler
 
                 // add the variable pointing at the data
                 var name = dict["name"];
-                var variableType = typename switch
+                var variableType = (typename + ptr) switch
                 {
                     "byte" => VariableDataType.Byte,
                     "sbyte" => VariableDataType.Sbyte,
@@ -302,9 +303,24 @@ public class Compiler
                     "long" => VariableDataType.Long,
                     "ulong" => VariableDataType.Ulong,
                     "proc" => VariableDataType.ProcStart,
-                    "string" => size == 0 ? VariableDataType.String : VariableDataType.FixedStrings,
+                    "string" => !isArray ? VariableDataType.String : VariableDataType.FixedStrings,
+
+                    "ptr" => VariableDataType.Ptr,
+
+                    "byteptr" => VariableDataType.BytePtr,
+                    "sbyteptr" => VariableDataType.SbytePtr,
+                    "shortptr" => VariableDataType.ShortPtr,
+                    "ushortptr" => VariableDataType.UshortPtr,
+                    "intptr" => VariableDataType.IntPtr,
+                    "uintptr" => VariableDataType.UintPtr,
+                    "longptr" => VariableDataType.LongPtr,
+                    "ulongptr" => VariableDataType.UlongPtr,
+                    "stringptr" => !isArray ? VariableDataType.StringPtr : VariableDataType.FixedStringsPtr,
                     _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                 };
+
+                if (variableType == VariableDataType.FixedStrings)
+                    isArray = false;
 
                 size = size == 0 ? 1 : size;
 
@@ -357,6 +373,7 @@ public class Compiler
 
                 var typename = match.Groups["typename"].Value;
                 var sizeString = match.Groups["size"].Value;
+                var ptr = match.Groups["modifier"].Value;
 
                 if (string.IsNullOrWhiteSpace(typename))
                     throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
@@ -383,7 +400,7 @@ public class Compiler
 
                 // add the variable pointing at the data
                 var name = dict["name"];
-                var variableType = typename switch
+                var variableType = (typename + ptr) switch
                 {
                     "byte" => VariableDataType.Byte,
                     "sbyte" => VariableDataType.Sbyte,
@@ -394,9 +411,25 @@ public class Compiler
                     "long" => VariableDataType.Long,
                     "ulong" => VariableDataType.Ulong,
                     "proc" => VariableDataType.ProcStart,
-                    "string" => size == 0 ? VariableDataType.String : VariableDataType.FixedStrings,
+                    "string" => !isArray ? VariableDataType.String : VariableDataType.FixedStrings,
+
+                    "ptr" => VariableDataType.Ptr,
+
+                    "byteptr" => VariableDataType.BytePtr,
+                    "sbyteptr" => VariableDataType.SbytePtr,
+                    "shortptr" => VariableDataType.ShortPtr,
+                    "ushortptr" => VariableDataType.UshortPtr,
+                    "intptr" => VariableDataType.IntPtr,
+                    "uintptr" => VariableDataType.UintPtr,
+                    "longptr" => VariableDataType.LongPtr,
+                    "ulongptr" => VariableDataType.UlongPtr,
+                    "stringptr" => !isArray ? VariableDataType.StringPtr : VariableDataType.FixedStringsPtr,
                     _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                 };
+
+
+                if (variableType == VariableDataType.FixedStrings)
+                    isArray = false;
 
                 size = size == 0 ? 1 : size;
 
@@ -427,6 +460,7 @@ public class Compiler
 
                 var typename = match.Groups["typename"].Value;
                 var sizeString = match.Groups["size"].Value;
+                var ptr = match.Groups["modifier"].Value;
 
                 if (string.IsNullOrWhiteSpace(typename))
                     throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
@@ -451,7 +485,7 @@ public class Compiler
 
                 // add the variable pointing at the data
                 var name = dict["name"];
-                var variableType = typename switch
+                var variableType = (typename + ptr) switch
                 {
                     "byte" => VariableDataType.Byte,
                     "sbyte" => VariableDataType.Sbyte,
@@ -463,8 +497,24 @@ public class Compiler
                     "ulong" => VariableDataType.Ulong,
                     "string" => VariableDataType.FixedStrings,
                     "proc" => VariableDataType.ProcStart,
+
+                    "ptr" => VariableDataType.Ptr,
+
+                    "byteptr" => VariableDataType.BytePtr,
+                    "sbyteptr" => VariableDataType.SbytePtr,
+                    "shortptr" => VariableDataType.ShortPtr,
+                    "ushortptr" => VariableDataType.UshortPtr,
+                    "intptr" => VariableDataType.IntPtr,
+                    "uintptr" => VariableDataType.UintPtr,
+                    "longptr" => VariableDataType.LongPtr,
+                    "ulongptr" => VariableDataType.UlongPtr,
+                    "stringptr" => !isArray ? VariableDataType.StringPtr : VariableDataType.FixedStringsPtr,
                     _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                 };
+
+                if (variableType == VariableDataType.FixedStrings)
+                    isArray = false;
+
                 state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray, position: source);
 
                 // construct the data
@@ -516,6 +566,7 @@ public class Compiler
 
                 var typename = match.Groups["typename"].Value;
                 var sizeString = match.Groups["size"].Value;
+                var ptr = match.Groups["modifier"].Value;
 
                 if (string.IsNullOrWhiteSpace(typename))
                     throw new GeneralCompilerException(source, $"Cannot parse '{dict["type"]}' into a typename");
@@ -531,7 +582,7 @@ public class Compiler
 
                 // add the variable pointing at the data
                 var name = dict["name"];
-                var variableType = typename switch
+                var variableType = (typename + ptr) switch
                 {
                     "byte" => VariableDataType.Byte,
                     "sbyte" => VariableDataType.Sbyte,
@@ -543,8 +594,23 @@ public class Compiler
                     "ulong" => VariableDataType.Ulong,
                     "string" => VariableDataType.FixedStrings,
                     "proc" => VariableDataType.ProcStart,
+
+                    "ptr" => VariableDataType.Ptr,
+
+                    "byteptr" => VariableDataType.BytePtr,
+                    "sbyteptr" => VariableDataType.SbytePtr,
+                    "shortptr" => VariableDataType.ShortPtr,
+                    "ushortptr" => VariableDataType.UshortPtr,
+                    "intptr" => VariableDataType.IntPtr,
+                    "uintptr" => VariableDataType.UintPtr,
+                    "longptr" => VariableDataType.LongPtr,
+                    "ulongptr" => VariableDataType.UlongPtr,
+                    "stringptr" => !isArray ? VariableDataType.StringPtr : VariableDataType.FixedStringsPtr,
                     _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {typename}")
                 };
+
+                if (variableType == VariableDataType.FixedStrings)
+                    isArray = false;
 
                 state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray, position: source);
 
@@ -560,6 +626,18 @@ public class Compiler
                     VariableDataType.Ulong => 8,
                     VariableDataType.FixedStrings => 1,
                     VariableDataType.ProcStart => 2,
+
+                    VariableDataType.Ptr => 2,
+                    VariableDataType.BytePtr => 2,
+                    VariableDataType.SbytePtr => 2,
+                    VariableDataType.ShortPtr => 2,
+                    VariableDataType.UshortPtr => 2,
+                    VariableDataType.IntPtr => 2,
+                    VariableDataType.UintPtr => 2,
+                    VariableDataType.LongPtr => 2,
+                    VariableDataType.UlongPtr => 2,
+                    VariableDataType.StringPtr => 2,
+                    VariableDataType.FixedStringsPtr => 2,
                     _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled type {variableType}")
                 };
 
@@ -717,7 +795,7 @@ public class Compiler
                     return;
 
                 state.StopNext = true;
-            })            
+            })
             ;
 
     public async Task<CompileResult> Compile()

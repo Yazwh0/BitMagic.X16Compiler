@@ -41,6 +41,18 @@ internal class DataBlock : IOutputData
             VariableDataType.Ulong => 8,
             VariableDataType.FixedStrings => 1,
             VariableDataType.ProcStart => 2,
+
+            VariableDataType.Ptr => 2,
+            VariableDataType.BytePtr => 2,
+            VariableDataType.SbytePtr => 2,
+            VariableDataType.ShortPtr => 2,
+            VariableDataType.UshortPtr => 2,
+            VariableDataType.IntPtr => 2,
+            VariableDataType.UintPtr => 2,
+            VariableDataType.LongPtr => 2,
+            VariableDataType.UlongPtr => 2,
+            VariableDataType.StringPtr => 2,
+            VariableDataType.FixedStringsPtr => 2,
             _ => throw new Exception($"Unhandled type {type}")
         };
         _expression = expression;
