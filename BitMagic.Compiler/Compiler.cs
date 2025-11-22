@@ -1202,6 +1202,9 @@ public class Compiler
             {
                 throw new UnknownSymbolException(line, $"Unknown name {string.Join(", ", line.RequiresRevalNames.Select(i => $"'{i}'"))}");
             }
+
+            if (line.RequiresReval)
+                toReturn++;
         }
 
         foreach (var p in proc.Procedures)
