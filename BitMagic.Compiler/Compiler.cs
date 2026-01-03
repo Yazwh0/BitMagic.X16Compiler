@@ -117,17 +117,22 @@ public class Compiler
 
                     if (address != segment.StartAddress)
                     {
+                        if (segment.ExplicitAddress)
+                            throw new GeneralCompilerException(source, $"Cannot modify segment start address when it was already explicitly set. {segment.Name} Current: 0x{segment.StartAddress:X4} Requested: 0x{address:X4}");
+
                         foreach (var proc in segment.DefaultProcedure)
                         {
                             if (proc.Value.Data.Any())
-                            {
-                                throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has data. {segment.Name}");
-                            }
+                                throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has data. {segment.Name} Current: 0x{segment.StartAddress:X4} Requested: 0x{address:X4}");
+
+                            if (proc.Value.Variables.Values.Any())
+                                throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has variables. {segment.Name} Current: 0x{segment.StartAddress:X4} Requested: 0x{address:X4}");
                         }
                     }
 
                     segment.Address = address;
                     segment.StartAddress = segment.Address;
+                    segment.ExplicitAddress = true;
                 }
                 else
                 {
@@ -137,6 +142,9 @@ public class Compiler
                         segment.StartAddress = segment.Address;
                     }
                 }
+
+                if (newSegment)
+                    Console.WriteLine($"{state.ZpParse} Creating Segment : {segment.Name} 0x{segment.StartAddress:X4}");
 
                 if (dict.ContainsKey("maxsize"))
                 {
@@ -160,14 +168,13 @@ public class Compiler
 
                 state.Segment = segment;
 
+
+                if (newSegment)
+                    state.Segments.Add(dict["name"], segment);
+
                 // if we're parsing ZP segmentents only, jump out
                 if (segment.StartAddress > 0x100 && state.ZpParse)
                     return;
-
-                if (newSegment)
-                {
-                    state.Segments.Add(dict["name"], segment);
-                }
 
                 var scopeName = "Main";
 

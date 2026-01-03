@@ -24,6 +24,9 @@ public class Segment
     public int MaxSize { get; set; }
 
     [JsonProperty]
+    public bool ExplicitAddress { get; set; }
+
+    [JsonProperty]
     public Dictionary<string, Procedure> DefaultProcedure { get; } = new Dictionary<string, Procedure>();
 
     public Segment(Variables globals, string name)

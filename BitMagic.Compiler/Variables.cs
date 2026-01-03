@@ -173,6 +173,21 @@ public class Variables : IVariables
         }
     }
 
+    public IEnumerable<IAsmVariable> GetChildVariables()
+    {    
+        foreach (var kv in _variables.Values)
+        {
+            yield return kv;
+        }
+        foreach (var child in _children.Where(i => i != null))
+        {
+            foreach (var v in child.GetChildVariables())
+            {
+                yield return v;
+            }
+        }
+    }
+
     public void SetDebuggerValue(string name, string expression, VariableDataType variableType, int length = 0, bool array = false)
     {
         var toAdd = new DebuggerVariable
