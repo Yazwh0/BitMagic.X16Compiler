@@ -985,6 +985,21 @@ public class Compiler
                 }
             }
 
+            if (state.ZpParse)
+            {
+                // cleanup non ZP segments after the initial process
+                var toRemove = new List<string>();
+                foreach (var s in state.Segments)
+                {
+                    if (s.Value.StartAddress >= 0x100 && s.Value.Name != "Main")
+                    {
+                        toRemove.Add(s.Key);
+                    }
+                }
+                foreach (var s in toRemove)
+                    state.Segments.Remove(s);
+            }
+
             state.ZpParse = false;
             state.Segment = state.Segments["Main"];
             state.Procedure = state.Segment.GetDefaultProcedure(state);
