@@ -11,7 +11,7 @@ namespace BitMagic.Compiler.Cpu
         public ParameterSize ParameterSize { get; init; } = ParameterSize.None;
 
         public int Order { get; init; }
-        
+
         public virtual (byte[]? Data, bool RequiresRecalc) Compile(string parameters, IOutputData line, ICpuOpCode opCode, IExpressionEvaluator expressionEvaluator, IVariables variables, bool final)
         {
             if (!Valid(parameters))
@@ -20,7 +20,7 @@ namespace BitMagic.Compiler.Cpu
             if (string.IsNullOrWhiteSpace(parameters))
                 return (Array.Empty<byte>(), false);
 
-            var toParse = GetParameter(parameters);            
+            var toParse = GetParameter(parameters);
 
             var (Result, RequiresRecalc) = expressionEvaluator.Evaluate(toParse, line.Source, variables, line.Address, final);
 
