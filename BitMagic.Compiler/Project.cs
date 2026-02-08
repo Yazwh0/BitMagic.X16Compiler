@@ -67,9 +67,9 @@ public class ProjectBinFile
 public enum ApplicationPart
 {
     None = 0,
-    Macro       = 0b0000_0001,
-    Compiler    = 0b0000_0010,
-    Emulator    = 0b0000_0100
+    Macro = 0b0000_0001,
+    Compiler = 0b0000_0010,
+    Emulator = 0b0000_0100
 }
 
 public class Options
@@ -88,6 +88,10 @@ public class CompileOptions
     [JsonProperty("displaySegments", DefaultValueHandling = DefaultValueHandling.Ignore)]
     [Description("Display segments.")]
     public bool DisplaySegments { get; set; }
+
+    [JsonProperty("displaySymbols", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Display symbol loading.")]
+    public bool DisplaySymbols { get; set; }
 
     [JsonProperty("displayCode", DefaultValueHandling = DefaultValueHandling.Ignore)]
     [Description("Display generated code.")]
