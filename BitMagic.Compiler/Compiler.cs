@@ -11,8 +11,6 @@ using BitMagic.Compiler.Exceptions;
 using BitMagic.Compiler.Warnings;
 using System.Text.RegularExpressions;
 using BitMagic.Compiler.Files;
-using System.Net.Http.Headers;
-using System.ComponentModel;
 
 namespace BitMagic.Compiler;
 
@@ -22,23 +20,26 @@ public class Compiler
     private readonly Dictionary<string, ICpuOpCode> _opCodes = new Dictionary<string, ICpuOpCode>();
     private readonly CommandParser _commandParser;
     private readonly IEmulatorLogger _logger;
+    private readonly DebugActionManager _debugActionManager;
     public static readonly string AnonymousLabel = "_";
     private static Regex _variableType = new Regex("(?<typename>(?i:byte|sbyte|short|ushort|int|uint|long|ulong|string|proc|ptr))(\\[(?<size>\\d+)\\])?(?:\\s+(?<modifier>ptr))?", RegexOptions.Compiled);
 
-    public Compiler(Project project, IEmulatorLogger logger)
+    public Compiler(Project project, DebugActionManager debugActionManager, IEmulatorLogger logger)
     {
         _project = project;
 
         _commandParser = CreateParser();
+        _debugActionManager = debugActionManager;
         _logger = logger;
     }
 
-    public Compiler(string code, IEmulatorLogger logger)
+    public Compiler(string code, DebugActionManager debugActionManager, IEmulatorLogger logger)
     {
         _project = new Project();
 
         _project.Code = new StaticTextFile(code);
         _commandParser = CreateParser();
+        _debugActionManager = debugActionManager;
         _logger = logger;
     }
 
@@ -803,6 +804,23 @@ public class Compiler
 
                 state.StopNext = true;
             })
+            .WithParameters(".debugload", (dict, state, source) =>
+            {
+                // if we're parsing ZP segmentents only, jump out
+                if (state.ZpParse)
+                    return;
+
+                if (!dict.ContainsKey("filename"))
+                    throw new DebugLoadArgumentsException(source, "filename");
+
+                if (!dict.ContainsKey("address"))
+                    throw new DebugLoadArgumentsException(source, "address");
+
+                var address = ParseStringToValue(dict["address"], () => new TextLine(source, false));
+
+                state.DebugActionId = _debugActionManager.CreateDebugLoadAction(state.DebugActionId, dict["filename"], address);
+
+            }, new[] { "filename", "address" })
             ;
 
     public async Task<CompileResult> Compile()

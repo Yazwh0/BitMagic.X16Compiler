@@ -13,7 +13,7 @@ public class Line : IOutputData
 
     public byte[] Data { get; internal set; } = new byte[] { };
     public uint[] DebugData { get; internal set; } = new uint[] { };
-    private uint _debugData;
+    private readonly uint _debugData;
     private readonly ICpuOpCode _opCode;
     public bool RequiresReval { get; internal set; }
     public List<string> RequiresRevalNames { get; } = new List<string>();
