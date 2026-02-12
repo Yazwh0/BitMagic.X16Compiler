@@ -1,4 +1,7 @@
 ﻿using BitMagic.Common;
+using BitMagic.Compiler.Exceptions;
+using BitMagic.Compiler.Files;
+using BitMagic.Compiler.Warnings;
 using BitMagic.Cpu;
 using BitMagic.Machines;
 using System;
@@ -6,11 +9,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using BitMagic.Compiler.Exceptions;
-using BitMagic.Compiler.Warnings;
 using System.Text.RegularExpressions;
-using BitMagic.Compiler.Files;
+using System.Threading.Tasks;
 
 namespace BitMagic.Compiler;
 
@@ -777,7 +777,8 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                state.Exception = true;
+
+                state.DebugActionId = _debugActionManager.CreateExceptionAction(state.DebugActionId);
             })
             .WithParameters(".nostop", (dict, state, source) =>
             {

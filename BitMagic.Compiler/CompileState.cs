@@ -37,7 +37,6 @@ public class CompileState
     public bool NoStop { get; set; }
     public bool StopNext { get; set; }
     public bool Breakpoint { get; set; }
-    public bool Exception { get; set; }
     public uint? DebugActionId { get; set; }
 
     // returns collected state that is emitted on a line of code or data
@@ -45,11 +44,9 @@ public class CompileState
     {
         var toReturn = (Breakpoint ? DebugConstants.Breakpoint : 0u) +
                        (StopNext ? 0u : (NoStop ? DebugConstants.NoStop : 0u)) +
-                       (Exception ? DebugConstants.Exception : 0u) + 
                        (DebugActionId != null ? DebugConstants.DebugAction : 0u);
 
         Breakpoint = false;
-        Exception = false;
         StopNext = false;
 
         if (DebugActionId != null)

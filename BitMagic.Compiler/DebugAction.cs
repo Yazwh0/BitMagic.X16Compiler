@@ -4,7 +4,8 @@ namespace BitMagic.Compiler;
 
 public enum DebugActionType
 {
-    DebugLoad
+    DebugLoad,
+    Exception
 }
 
 public interface IDebugAction
@@ -20,6 +21,8 @@ public class DebugActionManager
     private uint Id { get; set; } = 1;
     public uint CreateDebugLoadAction(uint? actionId, string filename, int address) =>
         Process(new DebugLoadAction() { Filename = filename, Address = address }, actionId);
+    public uint CreateExceptionAction(uint? actionId, string exceptionMessage = "") =>
+        Process(new ExceptionAction() { ExceptionMessage = exceptionMessage }, actionId);
 
     private uint Process(IDebugAction action, uint? actionId)
     {
@@ -62,6 +65,11 @@ public class DebugLoadAction : DebugActionBase
 {
     public string Filename { get; internal set; }
     public int Address { get; internal set; }
-
     public override DebugActionType DebugActionType => DebugActionType.DebugLoad;
+}
+
+public class ExceptionAction : DebugActionBase
+{
+    public string ExceptionMessage {get; internal set; }
+    public override DebugActionType DebugActionType => DebugActionType.Exception;
 }
