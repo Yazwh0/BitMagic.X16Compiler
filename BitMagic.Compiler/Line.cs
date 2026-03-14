@@ -15,6 +15,7 @@ public class Line : IOutputData
     public uint[] DebugData { get; internal set; } = new uint[] { };
     private readonly uint _debugData;
     private readonly ICpuOpCode _opCode;
+    public ICpuOpCode OpCode => _opCode;
     public bool RequiresReval { get; internal set; }
     public List<string> RequiresRevalNames { get; } = new List<string>();
     public Procedure Procedure { get; }

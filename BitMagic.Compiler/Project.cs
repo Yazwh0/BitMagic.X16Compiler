@@ -120,4 +120,8 @@ public class CompileOptions
     [JsonProperty("savePreGeneratedTemplate", DefaultValueHandling = DefaultValueHandling.Ignore)]
     [Description("Save Generated Pre-Template BMASM \\ C# files in the bin folder.")]
     public bool SavePreGeneratedTemplate { get; set; } = false;
+
+    [JsonProperty("warnOnBranchOverPage", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    [Description("Warns when a branch jumps to a different page.")]
+    public bool WarnOnBranchOverPage { get; set; }
 }

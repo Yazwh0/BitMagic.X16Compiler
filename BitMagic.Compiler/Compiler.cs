@@ -6,6 +6,7 @@ using BitMagic.Cpu;
 using BitMagic.Machines;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -144,8 +145,8 @@ public class Compiler
                     }
                 }
 
-                if (newSegment)
-                    Console.WriteLine($"{state.ZpParse} Creating Segment : {segment.Name} 0x{segment.StartAddress:X4}");
+                //if (newSegment)
+                //    Console.WriteLine($"{state.ZpParse} Creating Segment : {segment.Name} 0x{segment.StartAddress:X4}");
 
                 if (dict.ContainsKey("maxsize"))
                 {
@@ -877,6 +878,7 @@ public class Compiler
             }
         }
 
+        PostCompileWarnings(state);
         DisplayVariables(globals);
 
         // not sure what this does...
@@ -919,6 +921,41 @@ public class Compiler
         }
     }
 
+    private void PostCompileWarnings(CompileState state)
+    {
+        if (_project.CompileOptions.WarnOnBranchOverPage)
+        {
+            foreach (var proc in state.Segments.Values.SelectMany(p => p.DefaultProcedure.Values))
+            {
+                PostCompileWarningsProc(proc, state);
+            }
+        }
+    }
+
+    private void PostCompileWarningsProc(Procedure proc, CompileState state)
+    {
+        foreach (var data in proc.Data)
+        {
+            if (data is Line line)
+            {
+                if (new[] { "BCC", "BCS", "BEQ", "BMI", "BNE", "BPL", "BVC", "BVS" }.Contains(line.OpCode.Code))
+                {
+                    var offset = (sbyte)line.Data[0];
+                    var destination = line.Address + line.Data.Length + offset;
+                    if (((line.Address + line.Data.Length) & 0xFF00) != (destination & 0xFF00))
+                    {
+                        state.Warnings.Add(new BranchOverPageWarning(line));
+                    }
+                }
+            }
+        }
+
+        foreach(var p in proc.Procedures)
+        {
+            PostCompileWarningsProc(p, state);
+        }
+    }
+
     private async Task CompileFile(string fileName, CompileState state, IReadOnlyList<string>? lines = null, SourceFilePosition? compileSource = null)
     {
         if (lines == null)
@@ -933,7 +970,7 @@ public class Compiler
 
         // Need to parse ZP based segments first.
         // This is so ZP labels are all known when parsing opcodes to ensure the correct one is emitted.
-        // eg LDA $02 rather than LDA $0002.
+        // eg LDA 2 rather than LDA 2.
         state.ZpParse = true;
 
         for (var i = 0; i < 2; i++)
@@ -1056,9 +1093,6 @@ public class Compiler
 
         foreach (var filename in filenames)
         {
-            //var toSave = new List<byte>(0x10000);
-
-            // todo: enforce one segment, one filename???
             var segments = state.Segments.Where(i => (i.Value.Filename ?? "") == filename).OrderBy(kv => kv.Value.StartAddress).Select(kv => kv.Value).ToArray();
 
             var address = segments.First().StartAddress;
@@ -1097,33 +1131,12 @@ public class Compiler
             {
                 var headerBytes = new byte[] { (byte)(address & 0xff), (byte)((address & 0xff00) >> 8) };
 
-                //toSave.Add((byte)(address & 0xff));
-                //toSave.Add((byte)((address & 0xff00) >> 8));
-
                 writer.SetHeader(headerBytes);
             }
 
             foreach (var proc in segments.SelectMany(p => p.DefaultProcedure.Values).OrderBy(p => p.StartAddress))
             {
                 proc.Write(writer);
-                //foreach (var line in proc.Data.OrderBy(p => p.Address))
-                //{
-                //    writer.Add(line.Data, line.Address);
-                //    //if (address < line.Address)
-                //    //{
-                //    //    for (var i = address; i < line.Address; i++)
-                //    //    {
-                //    //        toSave.Add(0x00);
-                //    //        address++;
-                //    //    }
-                //    //}
-                //    //else if(address > line.Address)
-                //    //{
-                //    //    throw new Exception($"Lines address ${line.Address:X4} to output is behind the position in the output ${address:X4} in proc {proc.Name}.");
-                //    //}
-                //    //toSave.AddRange(line.Data);
-                //    //address += line.Data.Length;
-                //}
             }
 
             if (filename.StartsWith(':') && writer.HasData)
@@ -1132,24 +1145,6 @@ public class Compiler
             var result = writer.Write();
 
             toReturn.Add(result.SegmentName, result);
-
-            //if (string.IsNullOrWhiteSpace(filename))
-            //{
-            //    _project.OutputFile.Contents = toSave.ToArray();
-            //    if (!string.IsNullOrWhiteSpace(_project.OutputFile.Filename))
-            //    {
-            //        await _project.OutputFile.Save();
-            //        Console.WriteLine($"Written {toSave.Count} bytes to '{_project.OutputFile.Filename}'.");
-            //    } else
-            //    {
-            //        Console.WriteLine($"Program size {toSave.Count} bytes.");
-            //    }
-            //} 
-            //else 
-            //{
-            //    await File.WriteAllBytesAsync(filename, toSave.ToArray());
-            //    Console.WriteLine($"Written {toSave.Count} bytes to '{filename}'.");
-            //}
         }
 
         return toReturn;
