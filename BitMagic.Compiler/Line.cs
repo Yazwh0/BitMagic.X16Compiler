@@ -90,7 +90,7 @@ public class Line : IOutputData
         {
             labels.Add(thisParams[..idx]); // removes :
             thisParams = thisParams[(idx + 1)..];
-            idx = thisParams.IndexOf(':');
+            idx = thisParams.IndexOf(": ");
         }
 
         thisParams = thisParams.Replace(" ", "");
