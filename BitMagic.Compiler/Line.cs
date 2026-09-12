@@ -80,7 +80,7 @@ public class Line : IOutputData
 
         // check if the params have a label
         var thisParams = Params;
-        List<string>? labels = null;
+        List<string> labels = null;
         var idx = thisParams.IndexOf(": ");
 
         if (idx != -1)

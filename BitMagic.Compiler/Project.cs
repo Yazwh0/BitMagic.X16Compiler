@@ -19,7 +19,7 @@ public class Project
     public Options Options { get; } = new Options();
     public CompileOptions CompileOptions { get; set; } = new CompileOptions();
 
-    public IMachine? Machine { get; set; }
+    public IMachine Machine { get; set; }
 
     public TimeSpan LoadTime { get; set; }
     public TimeSpan PreProcessTime { get; set; }
@@ -28,8 +28,8 @@ public class Project
 
 public class ProjectBinFile
 {
-    public string? Filename { get; set; } = null;
-    public byte[]? Contents { get; set; } = null;
+    public string Filename { get; set; } = null;
+    public byte[] Contents { get; set; } = null;
 
     public Task Load(string filename)
     {

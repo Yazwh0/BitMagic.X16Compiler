@@ -12,7 +12,7 @@ internal class CommandParser
     private readonly Regex _firstWord = new Regex("^\\s*(?<result>([.][\\w\\-:]+))(?<line>(.*))$", RegexOptions.Compiled);
 
     private readonly Dictionary<string, Action<SourceFilePosition, CompileState, string>> _lineProcessor = new ();
-    private Action<string, CompileState, SourceFilePosition>? _labelProcessor;
+    private Action<string, CompileState, SourceFilePosition> _labelProcessor;
 
     private CommandParser()
     {
@@ -23,7 +23,7 @@ internal class CommandParser
         return new CommandParser();
     }
 
-    public CommandParser WithParameters(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames = null)
+    public CommandParser WithParameters(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string> defaultNames = null)
     {
         _lineProcessor.Add(verb, (p, s, r) => ProcesParameters(r, p, s, action, defaultNames));
         return this;
@@ -158,7 +158,7 @@ internal class CommandParser
     /// <param name="action"></param>
     /// <param name="defaultNames"></param>
     /// <exception cref="CompilerCannotParseVerbParameters"></exception>
-    private static void ProcesParameters(string rawParams, SourceFilePosition source, CompileState state, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string>? defaultNames)
+    private static void ProcesParameters(string rawParams, SourceFilePosition source, CompileState state, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string> defaultNames)
     {
         var parameters = new Dictionary<string, string>();
 

@@ -18,7 +18,7 @@ public class Procedure : IScope
     public List<IOutputData> Data { get; set; } = new List<IOutputData>();
 
     [JsonIgnore]
-    public Procedure? Parent { get; }
+    public Procedure Parent { get; }
 
     [JsonIgnore]
     private Dictionary<string, Procedure> _procedures = new Dictionary<string, Procedure>();
@@ -42,7 +42,7 @@ public class Procedure : IScope
     [JsonIgnore]
     public Scope Scope { get; }
 
-    public Procedure(Scope scope, string name, bool anonymous, Procedure? parent)
+    public Procedure(Scope scope, string name, bool anonymous, Procedure parent)
     {
         Name = name;
         Variables = anonymous ? scope.Variables : new Variables(scope.Variables, name);

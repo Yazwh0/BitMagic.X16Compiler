@@ -13,7 +13,7 @@ namespace BitMagic.Compiler
     {
         private readonly Asm6502ExpressionEvaluator _evaluator = new();
         private bool _requiresReval;
-        private IVariables? _variables = null;
+        private IVariables _variables = null;
         private readonly CompileState _state;
         private static readonly Regex _relativeLabel = new Regex(@"(?<relative>[-+]*)(?<label>[\w\d_]*)", RegexOptions.Compiled);
         private SourceFilePosition _source;
@@ -25,7 +25,7 @@ namespace BitMagic.Compiler
             _state = state;
         }
 
-        public IVariables? Variables => _variables;
+        public IVariables Variables => _variables;
 
         // not thread safe!!!
         public (int Result, bool RequiresRecalc) Evaluate(string expression, SourceFilePosition source, IVariables variables, int address, bool final)
@@ -119,7 +119,7 @@ namespace BitMagic.Compiler
             return new(result, _requiresReval);
         }
 
-        private void _evaluator_PreEvaluateVariable(object? sender, VariablePreEvaluationEventArg e)
+        private void _evaluator_PreEvaluateVariable(object sender, VariablePreEvaluationEventArg e)
         {
             if (_variables == null)
                 throw new NullReferenceException("_procedure is null");

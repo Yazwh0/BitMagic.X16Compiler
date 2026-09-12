@@ -15,7 +15,7 @@ public class Segment
     public Variables Variables { get; }
 
     [JsonProperty]
-    public string? Filename { get; set; }
+    public string Filename { get; set; }
 
     [JsonProperty]
     public int Address { get; set; }
@@ -36,7 +36,7 @@ public class Segment
         globals.RegisterChild(Variables);
     }
 
-    public Segment(Variables globals, bool anonymous, int startAddress, string name, string? filename = null)
+    public Segment(Variables globals, bool anonymous, int startAddress, string name, string filename = null)
     {
         Variables = new Variables(globals, name);
 

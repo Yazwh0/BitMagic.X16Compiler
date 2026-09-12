@@ -10,7 +10,7 @@ public enum DebugActionType
 
 public interface IDebugAction
 {
-    public IDebugAction? NextAction { get; }
+    public IDebugAction NextAction { get; }
     public void PushAction(IDebugAction action);
     public DebugActionType DebugActionType { get; }
 }
@@ -38,7 +38,7 @@ public class DebugActionManager
         return id;
     }
 
-    public IDebugAction? GetAction(uint id)
+    public IDebugAction GetAction(uint id)
     {
         if (DebugActions.TryGetValue(id, out var value))
             return value;
@@ -49,7 +49,7 @@ public class DebugActionManager
 
 public abstract class DebugActionBase : IDebugAction
 {
-    public IDebugAction? NextAction { get; private set; }
+    public IDebugAction NextAction { get; private set; }
     public abstract DebugActionType DebugActionType { get; }
 
     public void PushAction(IDebugAction action)

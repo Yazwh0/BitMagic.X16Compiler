@@ -956,7 +956,7 @@ public class Compiler
         }
     }
 
-    private async Task CompileFile(string fileName, CompileState state, IReadOnlyList<string>? lines = null, SourceFilePosition? compileSource = null)
+    private async Task CompileFile(string fileName, CompileState state, IReadOnlyList<string> lines = null, SourceFilePosition compileSource = null)
     {
         if (lines == null)
         {
@@ -1066,7 +1066,7 @@ public class Compiler
         }
     }
 
-    private Task<string> LoadFile(string filename, CompileState state, SourceFilePosition? source = null)
+    private Task<string> LoadFile(string filename, CompileState state, SourceFilePosition source = null)
     {
         if (!File.Exists(filename))
             throw new CompilerFileNotFound(filename);

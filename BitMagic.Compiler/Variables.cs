@@ -16,7 +16,7 @@ public class Variables : IVariables
     [JsonProperty]
     private readonly List<IAsmVariable> _ambiguousVariables = new();
 
-    private readonly Variables? _parent;
+    private readonly Variables _parent;
     private readonly List<Variables> _children = new List<Variables>();
 
     public string Namespace { get; }
@@ -55,7 +55,7 @@ public class Variables : IVariables
     }
 
     // Goes up the variable tree looking for a perfect match.
-    public bool TryGetValue(string name, SourceFilePosition source, out IAsmVariable? result)
+    public bool TryGetValue(string name, SourceFilePosition source, out IAsmVariable result)
     {
         if (_variables.ContainsKey(name))
         {
@@ -131,7 +131,7 @@ public class Variables : IVariables
         }
     }
 
-    public bool TryGetValue(int value, SourceFilePosition source, out IAsmVariable? result)
+    public bool TryGetValue(int value, SourceFilePosition source, out IAsmVariable result)
     {
         foreach (var i in _variables.Where(i => i.Value.Value == value && i.Value.VariableType == VariableType.CompileConstant))
         {
@@ -203,7 +203,7 @@ public class Variables : IVariables
     }
 
     public void SetValue(string name, int value, VariableDataType variableType, bool requiresReval, int length = 0, bool array = false,
-        Func<bool, (int Value, bool RequiresReval)>? evaluate = null, SourceFilePosition? position = null)
+        Func<bool, (int Value, bool RequiresReval)> evaluate = null, SourceFilePosition position = null)
     {
         name = name.Trim();
         var toAdd = new AsmVariable

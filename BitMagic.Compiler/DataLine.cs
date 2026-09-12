@@ -102,7 +102,7 @@ public class DataLine : IOutputData
             DebugData[j] = _debugData & 0xffff_fffe;
     }
 
-    private void _evaluator_PreEvaluateVariable(object? sender, VariablePreEvaluationEventArg e)
+    private void _evaluator_PreEvaluateVariable(object sender, VariablePreEvaluationEventArg e)
     {
         if (_procedure.Variables.TryGetValue(e.Name, Source, out var result))
         {
