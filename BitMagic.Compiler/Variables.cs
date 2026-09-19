@@ -24,6 +24,12 @@ public class Variables : IVariables
     [JsonIgnore]
     public IReadOnlyDictionary<string, IAsmVariable> Values => _variables;
 
+    // Segment/Scope/Procedure nesting is already this same tree (see the two-arg ctor
+    // below) - this just exposes it for walking, e.g. to build a debugger-side "all
+    // variables" view without any new compiler-side bookkeeping.
+    [JsonIgnore]
+    public IReadOnlyList<Variables> Children => _children;
+
     [JsonIgnore]
     public IList<IAsmVariable> AmbiguousVariables => _ambiguousVariables;
 
