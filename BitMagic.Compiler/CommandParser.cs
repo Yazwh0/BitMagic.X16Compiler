@@ -170,12 +170,12 @@ internal class CommandParser
 
         var defaultPos = 0;
 
-        var seperator = rawParams.Contains(',') ? ',' : ' ';
+        //var seperator = rawParams.Contains(',') ? ',' : ' ';
 
         var thisArgs =
             rawParams.Split('"')
                      .Select((element, index) => index % 2 == 0  // If even index
-                                       ? element.Split(seperator, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)  // Split the item
+                                       ? element.Split([',', ' '], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)  // Split the item
                                        : new string[] { element })  // Keep the entire item
                      .SelectMany(element => element).ToArray();
 
