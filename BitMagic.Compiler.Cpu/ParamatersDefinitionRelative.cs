@@ -2,7 +2,15 @@
 
 namespace BitMagic.Compiler.Cpu
 {
-    public class ParamatersDefinitionRelative : ParametersDefinitionSurround
+    public class BranchOutOfRangeException(string target, long offset, long outBy, long min, long max)
+        : System.Exception($"Branch target '{target}' is out of range by {outBy} byte{(outBy == 1 ? "" : "s")} (offset {offset}, allowed {min} to {max}).")
+    {
+        public string Target { get; } = target;
+        public long Offset { get; } = offset;
+        public long OutBy { get; } = outBy;
+    }
+
+    public class ParamatersDefinitionRelative: ParametersDefinitionSurround
     {
         public int Offset { get; init; } = -1;
 
@@ -20,13 +28,17 @@ namespace BitMagic.Compiler.Cpu
 
             var offset = Result - line.Address - opCode.OpCodeLength + Offset;
 
-            if ((ParameterSize == ParameterSize.Bit8 && (offset < sbyte.MinValue || offset > sbyte.MaxValue)) ||
-                (ParameterSize == ParameterSize.Bit16 && (offset < short.MinValue || offset > short.MaxValue)) ||
-                (ParameterSize == ParameterSize.Bit32 && (offset < int.MinValue || offset > int.MaxValue)))
+            var (min, max) = ParameterSize switch
             {
-                // todo: throw proper exception?
+                ParameterSize.Bit8 => ((long)sbyte.MinValue, (long)sbyte.MaxValue),
+                ParameterSize.Bit16 => (short.MinValue, short.MaxValue),
+                _ => (int.MinValue, int.MaxValue)
+            };
+
+            if (offset < min || offset > max)
+            {
                 if (final)
-                    return (null, false);
+                    throw new BranchOutOfRangeException(toParse, offset, offset > max ? offset - max : min - offset, min, max);
 
                 offset = 0;
                 RequiresRecalc = true;

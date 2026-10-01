@@ -1,5 +1,6 @@
 ﻿using BitMagic.Common;
 using BitMagic.Compiler.CodingSeb;
+using BitMagic.Compiler.Cpu;
 using BitMagic.Compiler.Exceptions;
 using CodingSeb.ExpressionEvaluator;
 using System.Collections.Generic;
@@ -146,6 +147,10 @@ public class Line : IOutputData
 
                     return;
                 }
+            }
+            catch (BranchOutOfRangeException ex)
+            {
+                throw new CompilerBranchToFarException(this, ex.Message);
             }
             catch (ExpressionEvaluatorSyntaxErrorException ex)
             {
