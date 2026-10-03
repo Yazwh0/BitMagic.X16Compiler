@@ -65,20 +65,22 @@ namespace BitMagic.Compiler
                     {
                         var l = variables.Values[label];
 
+                        // see below for why backwards can match the reference's own address, but forwards can't.
                         if (l.Value > address && direction == 1)
                             return (l.Value, false);
 
-                        if (l.Value < address && direction == -1)
+                        if (l.Value <= address && direction == -1)
                             return (l.Value, false);
 
                         throw new RelativeLabelException(source, $"Searching for relative label {label}, with a count of {direction}, but no label found");
                     }
 
-                    // strict inequalities: a label on the same opcode as this reference (eg `.: bne -`/`.: bne +`)
-                    // sits at the same address as the reference itself, and must not match itself.
+                    // A label on the same opcode as this reference (eg `.: jmp -`) sits at the reference's own address.
+                    // Backwards that is the loop the reference is in, so it matches: `.: jmp -` jumps to itself.
+                    // Forwards it never matches, `.: bne +` goes to the next label rather than itself.
                     var labels = direction > 0 ?
                         variables.AmbiguousVariables.Where(i => i.Name == label && i.Value > address).OrderBy(i => i.Value) :
-                        variables.AmbiguousVariables.Where(i => i.Name == label && i.Value < address).OrderByDescending(i => i.Value);
+                        variables.AmbiguousVariables.Where(i => i.Name == label && i.Value <= address).OrderByDescending(i => i.Value);
 
                     var item = labels.Skip(Math.Abs(direction) - 1).FirstOrDefault();
 
