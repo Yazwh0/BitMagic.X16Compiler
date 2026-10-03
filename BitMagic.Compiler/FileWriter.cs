@@ -82,5 +82,5 @@ internal class FileWriter : IWriter
         _header = toAdd.ToArray();
     }
 
-    public NamedStream Write() => new (SegmentName, FileName, _header.Concat(_data).ToArray(), _debugData.ToArray(), IsMain);        
+    public NamedStream Write() => new (SegmentName, FileName, _header.Concat(_data).ToArray(), _debugData.ToArray(), IsMain, _header.Length != 0);        
 }

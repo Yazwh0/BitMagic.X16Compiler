@@ -28,13 +28,19 @@ public class NamedStream : MemoryStream
     public string FileName { get; set; }
     public bool IsMain { get; }
 
+    /// <summary>
+    /// The data starts with a 2-byte load address header, which isn't in the code.
+    /// </summary>
+    public bool HasHeader { get; }
+
     public uint[] DebugData { get; }
 
-    public NamedStream(string name, string fileName, byte[] data, uint[] debugData, bool isMain) : base(data, false)
+    public NamedStream(string name, string fileName, byte[] data, uint[] debugData, bool isMain, bool hasHeader = false) : base(data, false)
     {
         SegmentName = name;
         FileName = fileName;
         IsMain = isMain;
+        HasHeader = hasHeader;
         DebugData = debugData;
     }
 }

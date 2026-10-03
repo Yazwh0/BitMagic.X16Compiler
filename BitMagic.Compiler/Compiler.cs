@@ -1117,12 +1117,15 @@ public class Compiler
             }
             else
             {   // segment with filename
-                header = !string.IsNullOrWhiteSpace(filename) && (
-                    filename.EndsWith(".prg", StringComparison.OrdinalIgnoreCase) ||
-                    filename.EndsWith(".x16", StringComparison.OrdinalIgnoreCase));
-
                 thisFilename = filename;
                 isMain = _project.OutputFile.Filename == filename;
+
+                // The main output is a program, so it is loaded with its header whatever it's called (eg 'CAT'),
+                // unless it is named as a raw .bin. Other files only get one if they are named as a program.
+                header = isMain ?
+                    !filename.EndsWith(".bin", StringComparison.OrdinalIgnoreCase) :
+                    filename.EndsWith(".prg", StringComparison.OrdinalIgnoreCase) ||
+                    filename.EndsWith(".x16", StringComparison.OrdinalIgnoreCase);
             }
 
             var writer = new FileWriter(segments.First().Name, thisFilename, address, isMain);
