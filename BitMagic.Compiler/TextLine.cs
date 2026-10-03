@@ -18,8 +18,7 @@ public class TextLine : IOutputData
     public SourceFilePosition Source { get; }
     public bool CanStep { get; }
 
-    private readonly EmptyScope EmptyScope = new EmptyScope();
-    public IScope Scope => EmptyScope;
+    public IScope Scope { get; }
 
     public void ProcessParts(bool finalParse)
     {
@@ -29,10 +28,11 @@ public class TextLine : IOutputData
     {
     }
 
-    public TextLine(SourceFilePosition source, bool canStep)
+    public TextLine(SourceFilePosition source, bool canStep, IScope scope = null)
     {
         Source = source;
         CanStep = canStep;
+        Scope = scope ?? new EmptyScope();
     }
 }
 
