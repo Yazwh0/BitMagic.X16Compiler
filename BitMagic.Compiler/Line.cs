@@ -75,6 +75,44 @@ public class Line : IOutputData
         yield return (byte)(i & 0xff);
     }
 
+    /// <summary>
+    /// Removes spaces from the parameters so the addressing mode templates match, but keeps them inside a
+    /// character or string literal, eg `cmp #' '`.
+    /// </summary>
+    internal static string RemoveSpaces(string parameters)
+    {
+        if (!parameters.Contains(' '))
+            return parameters;
+
+        var sb = new System.Text.StringBuilder(parameters.Length);
+        char? quote = null;
+
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            var c = parameters[i];
+
+            if (quote != null)
+            {
+                sb.Append(c);
+
+                if (c == '\\' && i + 1 < parameters.Length)
+                    sb.Append(parameters[++i]); // escaped character, eg '\''
+                else if (c == quote)
+                    quote = null;
+
+                continue;
+            }
+
+            if (c is '\'' or '"')
+                quote = c;
+
+            if (c != ' ')
+                sb.Append(c);
+        }
+
+        return sb.ToString();
+    }
+
     public void ProcessParts(bool finalParse)
     {
         //var allPossible = _cpu.ParameterDefinitions.Where(i => i.Value.Valid(Params) && i.Value.HasTemplate).OrderBy(i => i.Value.Order).ToList();
@@ -94,7 +132,7 @@ public class Line : IOutputData
             idx = thisParams.IndexOf(": ");
         }
 
-        thisParams = thisParams.Replace(" ", "");
+        thisParams = RemoveSpaces(thisParams);
 
         foreach (var i in _opCode.Modes.Where(i => _cpu.ParameterDefinitions.ContainsKey(i)).Select(i => _cpu.ParameterDefinitions[i]).OrderBy(i => i.Order))
         {

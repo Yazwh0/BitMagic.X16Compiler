@@ -61,33 +61,24 @@ namespace BitMagic.Compiler
                     if (direction == 0)
                         throw new RelativeLabelException(source, $"Parsing relative label in expression {expression} rendered no direction");
 
-                    if (variables.Values.ContainsKey(label))
-                    {
-                        var l = variables.Values[label];
-
-                        // see below for why backwards can match the reference's own address, but forwards can't.
-                        if (l.Value > address && direction == 1)
-                            return (l.Value, false);
-
-                        if (l.Value <= address && direction == -1)
-                            return (l.Value, false);
-
-                        throw new RelativeLabelException(source, $"Searching for relative label {label}, with a count of {direction}, but no label found");
-                    }
+                    // a label name used once has been made explicit, otherwise all the labels with the name are ambiguous.
+                    var addresses = variables.Values.TryGetValue(label, out var explicitLabel) ?
+                        new List<int> { explicitLabel.Value } :
+                        variables.AmbiguousVariables.Where(i => i.Name == label).Select(i => i.Value).ToList();
 
                     // A label on the same opcode as this reference (eg `.: jmp -`) sits at the reference's own address.
                     // Backwards that is the loop the reference is in, so it matches: `.: jmp -` jumps to itself.
                     // Forwards it never matches, `.: bne +` goes to the next label rather than itself.
-                    var labels = direction > 0 ?
-                        variables.AmbiguousVariables.Where(i => i.Name == label && i.Value > address).OrderBy(i => i.Value) :
-                        variables.AmbiguousVariables.Where(i => i.Name == label && i.Value <= address).OrderByDescending(i => i.Value);
+                    var inDirection = direction > 0 ?
+                        addresses.Where(i => i > address).Order().ToList() :
+                        addresses.Where(i => i <= address).OrderDescending().ToList();
 
-                    var item = labels.Skip(Math.Abs(direction) - 1).FirstOrDefault();
+                    var count = Math.Abs(direction);
 
-                    if (item != null)
-                        return (item.Value, false);
+                    if (inDirection.Count >= count)
+                        return (inDirection[count - 1], false);
 
-                    return (0xabcd, true); // error
+                    throw new RelativeLabelException(source, RelativeLabelError(relative, label, direction, addresses.Count, inDirection.Count));
                 }
             }
             _variables = variables;
@@ -121,6 +112,30 @@ namespace BitMagic.Compiler
             }
 
             return new(result, _requiresReval);
+        }
+
+        // Why a relative label can't be found: no label of that name, they are all in the other direction, or there
+        // aren't enough of them for the count (eg '--loop' with only one loop before it).
+        private static string RelativeLabelError(string relative, string label, int direction, int total, int inDirection)
+        {
+            var anonymous = label == Compiler.AnonymousLabel;
+            var written = anonymous ? relative : relative + label;
+            var name = anonymous ? "anonymous label" : $"'{label}' label";
+            var article = anonymous ? "an" : "a";
+            var where = direction < 0 ? "before" : "after";
+            var count = Math.Abs(direction);
+
+            if (total == 0)
+                return $"'{written}' needs {article} {name}, but there isn't one.";
+
+            if (inDirection == 0)
+            {
+                var opposite = direction < 0 ? "after" : "before";
+                var suggestion = (direction < 0 ? "+" : "-") + (anonymous ? "" : label);
+                return $"'{written}' needs {article} {name} {where} it, but the only {(total == 1 ? "one is" : "ones are")} {opposite} it. Did you mean '{suggestion}'?";
+            }
+
+            return $"'{written}' needs {count} {name}s {where} it, but there {(inDirection == 1 ? "is" : "are")} only {inDirection}.";
         }
 
         private void _evaluator_PreEvaluateVariable(object sender, VariablePreEvaluationEventArg e)
