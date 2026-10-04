@@ -65,7 +65,7 @@ internal class CommandParser
         if (thisVerb.EndsWith(':'))
         {
             if (_labelProcessor == null)
-                throw new Exception("Label processor is null");
+                throw new GeneralCompilerException(source, $"Cannot process label '{thisVerb}', no label processor is set.");
 
             _labelProcessor(thisVerb, state, source);
             return;

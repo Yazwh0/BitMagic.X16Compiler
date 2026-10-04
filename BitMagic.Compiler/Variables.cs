@@ -1,4 +1,5 @@
 ﻿using BitMagic.Common;
+using BitMagic.Compiler.Exceptions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -242,7 +243,13 @@ public class Variables : IVariables
         foreach (var i in variables)
         {
             if (_variables.ContainsKey(i.Name))
-                throw new Exception($"Variable already defined {i.Name}");
+            {
+                var message = $"Variable '{i.Name}' is already defined.";
+                if (i is AsmVariable { SourceFilePosition: not null } asmVariable)
+                    throw new VariableException(asmVariable.SourceFilePosition, i.Name, message);
+
+                throw new CompilerGeneralException(message);
+            }
 
             _ambiguousVariables.Remove(i);
             _variables.Add(i.Name, i);

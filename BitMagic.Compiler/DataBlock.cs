@@ -1,4 +1,5 @@
 ﻿using BitMagic.Common;
+using BitMagic.Compiler.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +54,7 @@ internal class DataBlock : IOutputData
             VariableDataType.UlongPtr => 2,
             VariableDataType.StringPtr => 2,
             VariableDataType.FixedStringsPtr => 2,
-            _ => throw new Exception($"Unhandled type {type}")
+            _ => throw new UnknownDataTypeCompilerException(source, $"Unhandled data type '{type}'.")
         };
         _expression = expression;
         _type = type;

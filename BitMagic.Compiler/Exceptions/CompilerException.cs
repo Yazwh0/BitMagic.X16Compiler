@@ -9,4 +9,8 @@ public abstract class CompilerException : Exception
     protected CompilerException(string message) : base(message)
     {
     }
+
+    protected CompilerException(string message, Exception inner) : base(message, inner)
+    {
+    }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using BitMagic.Compiler.Exceptions;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -32,32 +33,14 @@ internal class FileWriter : IWriter
         IsMain = main;
     }
 
-    public void Add(byte toAdd, int address, uint debugData)
-    {
-        var index = _startAddress - address;
-
-        if (index < 0)
-            throw new IndexOutOfRangeException();
-
-        while (_data.Count < index)
-        {
-            _data.Add(0x00);
-            _debugData.Add(0x00);
-        }
-
-        if (_data[index] != 0)
-            throw new Exception("Overwrite detected!");
-
-        _data[index] = toAdd;
-        _debugData[index] = debugData;
-    }
+    public void Add(byte toAdd, int address, uint debugData) => Add([toAdd], address, [debugData]);
 
     public void Add(byte[] toAdd, int address, uint[] debugData)
     {
         var index = address - _startAddress;
 
         if (index < 0)
-            throw new IndexOutOfRangeException();
+            throw new FileWriterOverlapException($"Cannot write to ${address:X4}, it is before the start of segment '{SegmentName}' (${_startAddress:X4}).");
 
         while (_data.Count < index + toAdd.Length)
         {
@@ -68,7 +51,7 @@ internal class FileWriter : IWriter
         for(var i = 0; i < toAdd.Length; i++)
         {
             if (_data[index] != 0)
-                throw new Exception("Overwrite detected!");
+                throw new FileWriterOverlapException($"Writing to ${_startAddress + index:X4} overwrites existing data in segment '{SegmentName}' ('{FileName}').");
 
             _debugData[index] = debugData[i];
             _data[index++] = toAdd[i];

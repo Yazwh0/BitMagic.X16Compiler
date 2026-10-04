@@ -141,7 +141,7 @@ namespace BitMagic.Compiler
         private void _evaluator_PreEvaluateVariable(object sender, VariablePreEvaluationEventArg e)
         {
             if (_variables == null)
-                throw new NullReferenceException("_procedure is null");
+                throw new CompilerGeneralException($"Cannot evaluate '{e.Name}', no variables are in scope.");
 
             if (_variables.TryGetValue(e.Name, _source, out var result))
             {

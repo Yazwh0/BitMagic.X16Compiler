@@ -895,7 +895,7 @@ public class Compiler
     private void InitFromMachine(CompileState state)
     {
         if (_project.Machine == null)
-            throw new NullReferenceException();
+            throw new MachineNotSetException();
 
         _opCodes.Clear();
         foreach (var opCode in _project.Machine.Cpu.OpCodes)
@@ -1192,7 +1192,7 @@ public class Compiler
                 if (variable.SourceFilePosition != null)
                     throw new UnknownConstantException(variable.SourceFilePosition, $"Cannot evaluate '{variable.SourceFilePosition.Source}'.");
 
-                throw new Exception($"cannot evaluate {i.Name}, no source file position?!");
+                throw new CompilerGeneralException($"Cannot evaluate '{i.Name}'.");
             }
             else if (r.RequiresReval)
             {

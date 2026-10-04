@@ -1,4 +1,5 @@
 ﻿using BitMagic.Common;
+using BitMagic.Compiler.Exceptions;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
@@ -92,7 +93,14 @@ public class Procedure : IScope
     {
         foreach (var d in Data)
         {
-            writer.Add(d.Data, d.Address, d.DebugData);
+            try
+            {
+                writer.Add(d.Data, d.Address, d.DebugData);
+            }
+            catch (FileWriterOverlapException e)
+            {
+                throw new CompilerOutputOverlapException(d, e.Message);
+            }
         }
 
         foreach(var p in _procedures.Values)
