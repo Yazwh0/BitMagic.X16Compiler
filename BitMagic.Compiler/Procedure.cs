@@ -65,13 +65,21 @@ public class Procedure : IScope
         Data.Add(line);
     }
 
-    public Procedure GetProcedure(string name, int address)
+    public Procedure GetProcedure(string name, int address) => GetProcedure(name, address, Visibility.Public, null);
+
+    // A procedure that's reopened keeps the visibility it was given first; asking for a different one is an error.
+    public Procedure GetProcedure(string name, int address, Visibility visibility, SourceFilePosition source)
     {
         if (!_procedures.ContainsKey(name))
         {
             var proc = new Procedure(name, this);
+            proc.Variables.Visibility = visibility;
             _procedures.Add(name, proc);
-            Variables.SetValue(name, address, VariableDataType.ProcStart, false);
+            Variables.SetValue(name, address, VariableDataType.ProcStart, false, position: source, visibility: visibility);
+        }
+        else if (_procedures[name].Variables.Visibility != visibility && visibility == Visibility.Private)
+        {
+            throw new GeneralCompilerException(source, $"Procedure '{name}' is already public, it can't be reopened as private.");
         }
 
         return _procedures[name];

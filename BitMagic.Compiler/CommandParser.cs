@@ -23,16 +23,53 @@ internal class CommandParser
         return new CommandParser();
     }
 
-    public CommandParser WithParameters(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string> defaultNames = null)
+    /// <param name="allowVisibility">The verb takes `public` or `private` as its first word, passed on as dict["visibility"].</param>
+    public CommandParser WithParameters(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string> defaultNames = null, bool allowVisibility = false)
     {
-        _lineProcessor.Add(verb, (p, s, r) => ProcesParameters(r, p, s, action, defaultNames));
+        _lineProcessor.Add(verb, (p, s, r) =>
+        {
+            var withVisibility = WithVisibility(action, r, allowVisibility, out var rest);
+            ProcesParameters(rest, p, s, withVisibility, defaultNames);
+        });
         return this;
     }
 
-    public CommandParser WithAssignment(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, bool hasType)
+    /// <param name="allowVisibility">The verb takes `public` or `private` as its first word, passed on as dict["visibility"].</param>
+    public CommandParser WithAssignment(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, bool hasType, bool allowVisibility = false)
     {
-        _lineProcessor.Add(verb, (p, s, r) => ProcessAssignment(r, p, s, action, hasType));
+        _lineProcessor.Add(verb, (p, s, r) =>
+        {
+            var withVisibility = WithVisibility(action, r, allowVisibility, out var rest);
+            ProcessAssignment(rest, p, s, withVisibility, hasType);
+        });
         return this;
+    }
+
+    // Takes a leading `public` / `private` off the parameters, and wraps the action so it is
+    // passed on in the dictionary.
+    private static Action<IDictionary<string, string>, CompileState, SourceFilePosition> WithVisibility(
+        Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, string rawParams, bool allowVisibility, out string rest)
+    {
+        rest = rawParams;
+
+        if (!allowVisibility || rawParams == null)
+            return action;
+
+        var trimmed = rawParams.TrimStart();
+        foreach (var keyword in Variables.ReservedNames)
+        {
+            if (trimmed == keyword || trimmed.StartsWith(keyword + " ") || trimmed.StartsWith(keyword + "\t"))
+            {
+                rest = trimmed[keyword.Length..];
+                return (dict, state, source) =>
+                {
+                    dict["visibility"] = keyword;
+                    action(dict, state, source);
+                };
+            }
+        }
+
+        return action;
     }
 
     public CommandParser WithLine(string verb, Action<SourceFilePosition, CompileState> action)

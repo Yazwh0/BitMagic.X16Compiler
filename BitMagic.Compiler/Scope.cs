@@ -13,9 +13,13 @@ public class ScopeFactory
         _global = global;
     }
 
-    public Scope GetScope(string name)
+    public Scope GetScope(string name) => GetScope(name, out _);
+
+    public Scope GetScope(string name, out bool isNew)
     {
-        if (!_scopes.ContainsKey(name))
+        isNew = !_scopes.ContainsKey(name);
+
+        if (isNew)
             _scopes.Add(name, new Scope(name, _global));
 
         return _scopes[name];
@@ -32,6 +36,13 @@ public class Scope : IScope
     [JsonProperty]
     public Variables Variables { get; }
     IVariables IScope.Variables => Variables;
+
+    /// <summary>
+    /// The visibility of names declared in the scope without a keyword. Set by the first
+    /// `.scope public|private name`; `.export` is always public whatever this is.
+    /// </summary>
+    [JsonProperty]
+    public Visibility DefaultVisibility { get; internal set; } = Visibility.Public;
 
     internal Scope(string name, Variables globals)
     {

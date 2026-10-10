@@ -134,6 +134,9 @@ public class Line : IOutputData
 
         thisParams = RemoveSpaces(thisParams);
 
+        // a mode whose syntax matched, but whose value didn't fit only because a name isn't known yet
+        ParametersDefinitionSingle unresolvedMode = null;
+
         foreach (var i in _opCode.Modes.Where(i => _cpu.ParameterDefinitions.ContainsKey(i)).Select(i => _cpu.ParameterDefinitions[i]).OrderBy(i => i.Order))
         {
             try
@@ -144,47 +147,22 @@ public class Line : IOutputData
                     RequiresReval = compileResult.RequiresRecalc;
 
                     if (finalParse && RequiresReval)
-                        throw new CannotCompileException(this, $"Unknown label within '{_toParse}'");
-
-                    var currentLength = Data.Length;
-
-                    Data = IntToByteArray(_opCode.GetOpCode(i.AccessMode)).Concat(compileResult.Data).ToArray();
-                    DebugData = new uint[Data.Length];
-                    DebugData[0] = _debugData;
-                    for (var j = 1; j < Data.Length; j++)
-                        DebugData[j] = _debugData & 0xfffffffe;
-
-                    if (currentLength != 0 && currentLength != Data.Length)
-                        throw new CannotCompileException(this, $"Fatal error. While parsing '{_toParse}' the opcode data length has changed.");
-
-                    if (labels != null)
                     {
-                        if (Data.Length <= 1)
-                            throw new LabelOutOfBoundsException(this, "Cannot apply inline labels to a opcode that doesn't have parameters.");
+                        // a name that was found but is private says so, rather than "unknown"
+                        if (_expressionEvaluator is ExpressionEvaluator { HiddenReasons.Count: > 0 } evaluator)
+                            throw new CannotCompileException(this, $"{string.Join("; ", evaluator.HiddenReasons)}.");
 
-                        foreach (var l in labels.Select(l => l.Trim()))
-                        {
-                            if (l.StartsWith('<'))
-                            {
-                                _state.Procedure.Variables.SetValue(l[1..], Address + 1, VariableDataType.Byte, false, position: Source);
-                            }
-                            else if (l.StartsWith('>'))
-                            {
-                                if (Data.Length < 2)
-                                    throw new LabelOutOfBoundsException(this, "Cannot use '>' to define a inline label for a opcode that takes a byte.");
-
-                                _state.Procedure.Variables.SetValue(l[1..], Address + 2, VariableDataType.Byte, false, position: Source);
-                            }
-                            else
-                            {
-                                var destType = Data.Length <= 2 ? VariableDataType.Byte : VariableDataType.Ushort;
-                                _state.Procedure.Variables.SetValue(l, Address + 1, destType, false, position: Source);
-                            }
-                        }
+                        throw new CannotCompileException(this, $"Unknown label within '{_toParse}'");
                     }
 
+                    SetData(i.AccessMode, compileResult.Data, labels);
                     return;
                 }
+
+                // Compile only evaluates when the syntax matches, so the flag is for this mode's value
+                if (!finalParse && unresolvedMode == null && i is ParametersDefinitionSingle single && single.Valid(thisParams) &&
+                    _expressionEvaluator is ExpressionEvaluator { LastRequiresReval: true })
+                    unresolvedMode = single;
             }
             catch (BranchOutOfRangeException ex)
             {
@@ -196,7 +174,76 @@ public class Line : IOutputData
             }
         }
 
+        // On an early pass a name that isn't known yet is a two byte placeholder, so a mode that only takes a byte
+        // (#x, (x),y, ...) rejects it, and with no wider mode for that syntax nothing compiled. The syntax fixes the
+        // size, so use that mode with a placeholder and let the final pass work out the value, or say why it can't.
+        if (unresolvedMode != null)
+        {
+            RequiresReval = true;
+            SetData(unresolvedMode.AccessMode, new byte[ParameterBytes(unresolvedMode.ParameterSize)], labels);
+            return;
+        }
+
+        // a private name gives an unknown value, which may not fit the operand, so say why
+        if (_expressionEvaluator is ExpressionEvaluator { HiddenReasons.Count: > 0 } hidden)
+            throw new CannotCompileException(this, $"Cannot compile line '{_original}': {string.Join("; ", hidden.HiddenReasons)}.");
+
         throw new CannotCompileException(this, $"Cannot compile line '{_original}'");
+    }
+
+    private static int ParameterBytes(ParameterSize size) => size switch
+    {
+        ParameterSize.Bit8 => 1,
+        ParameterSize.Bit16 => 2,
+        ParameterSize.Bit32 => 4,
+        _ => 0
+    };
+
+    // The opcode plus its operand, and any inline labels on the operand.
+    private void SetData(AccessMode accessMode, byte[] operand, List<string> labels)
+    {
+        var currentLength = Data.Length;
+
+        Data = IntToByteArray(_opCode.GetOpCode(accessMode)).Concat(operand).ToArray();
+        DebugData = new uint[Data.Length];
+        DebugData[0] = _debugData;
+        for (var j = 1; j < Data.Length; j++)
+            DebugData[j] = _debugData & 0xfffffffe;
+
+        if (currentLength != 0 && currentLength != Data.Length)
+            throw new CannotCompileException(this, $"Fatal error. While parsing '{_toParse}' the opcode data length has changed.");
+
+        if (labels == null)
+            return;
+
+        if (Data.Length <= 1)
+            throw new LabelOutOfBoundsException(this, "Cannot apply inline labels to a opcode that doesn't have parameters.");
+
+        foreach (var l in labels.Select(l => l.Trim()))
+        {
+            // operand labels are private outside their scope, .export opens them up
+            var keyword = l.TrimStart('<', '>').Split(' ', '\t')[0];
+            if (l.Contains(' ') && Variables.ReservedNames.Contains(keyword))
+                throw new LabelOutOfBoundsException(this, $"Operand labels can't be {keyword}, they're private to their procedure. Use .export to make one visible.");
+
+            if (l.StartsWith('<'))
+            {
+                _state.Procedure.Variables.SetValue(l[1..], Address + 1, VariableDataType.Byte, false, position: Source, operandLabel: true);
+            }
+            else if (l.StartsWith('>'))
+            {
+                // Data includes the opcode, so a two byte operand is a length of 3
+                if (Data.Length < 3)
+                    throw new LabelOutOfBoundsException(this, "Cannot use '>' to define a inline label for a opcode that takes a byte.");
+
+                _state.Procedure.Variables.SetValue(l[1..], Address + 2, VariableDataType.Byte, false, position: Source, operandLabel: true);
+            }
+            else
+            {
+                var destType = Data.Length <= 2 ? VariableDataType.Byte : VariableDataType.Ushort;
+                _state.Procedure.Variables.SetValue(l, Address + 1, destType, false, position: Source, operandLabel: true);
+            }
+        }
     }
 
     public void WriteToConsole(IEmulatorLogger logger)

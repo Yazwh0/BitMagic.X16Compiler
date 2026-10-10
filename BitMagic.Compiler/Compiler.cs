@@ -44,6 +44,29 @@ public class Compiler
         _logger = logger;
     }
 
+    // The `public` / `private` keyword CommandParser took off the front of the line, or the
+    // default if there wasn't one.
+    private static Visibility TakeVisibility(IDictionary<string, string> dict, Visibility defaultVisibility)
+    {
+        if (!dict.TryGetValue("visibility", out var keyword))
+            return defaultVisibility;
+
+        dict.Remove("visibility");
+        return keyword == "private" ? Visibility.Private : Visibility.Public;
+    }
+
+    // A declaration with no keyword takes the scope's default, see `.scope private name`.
+    private static Visibility TakeVisibility(IDictionary<string, string> dict, CompileState state) =>
+        TakeVisibility(dict, state.Scope.DefaultVisibility);
+
+    private static string Keyword(Visibility visibility) => visibility == Visibility.Private ? "private" : "public";
+
+    private static void CheckNotReserved(IDictionary<string, string> dict, SourceFilePosition source, string what)
+    {
+        if (dict.TryGetValue("name", out var name) && Variables.ReservedNames.Contains(name))
+            throw new GeneralCompilerException(source, $"A {what} can't be public or private, and '{name}' can't be used as a name.");
+    }
+
     private CommandParser CreateParser() => CommandParser.Parser()
             .WithLabel((label, state, source) =>
             {
@@ -100,6 +123,7 @@ public class Compiler
             }, new[] { "name" })
             .WithParameters(".segment", (dict, state, source) =>
             {
+                CheckNotReserved(dict, source, "segment");
                 Segment segment;
                 bool newSegment;
                 if (state.Segments.ContainsKey(dict["name"]))
@@ -207,13 +231,32 @@ public class Compiler
 
                 //state.Procedures.Push(state.Procedure);
 
+                // `.scope private name` makes names in the scope private unless marked public
+                var hasKeyword = dict.ContainsKey("visibility");
+                var visibility = TakeVisibility(dict, Visibility.Public);
+
+                if (dict.TryGetValue("name", out var reserved) && Variables.ReservedNames.Contains(reserved))
+                    throw new GeneralCompilerException(source, $"'{reserved}' can't be used as a name.");
+
+                if (!dict.ContainsKey("name") && hasKeyword)
+                    throw new GeneralCompilerException(source, $"A {Keyword(visibility)} scope needs a name.");
+
                 string name = dict.ContainsKey("name") ? dict["name"] : $"Scope_{state.AnonCounter}";
-                state.Scope = state.ScopeFactory.GetScope(name);
+                state.Scope = state.ScopeFactory.GetScope(name, out var isNew);
+
+                // the first time a scope is opened sets its default, after that a keyword has to agree
+                if (hasKeyword)
+                {
+                    if (isNew)
+                        state.Scope.DefaultVisibility = visibility;
+                    else if (state.Scope.DefaultVisibility != visibility)
+                        throw new GeneralCompilerException(source, $"Scope '{name}' was opened {Keyword(state.Scope.DefaultVisibility)}, so can't be reopened as {Keyword(visibility)}.");
+                }
 
                 state.Procedure = state.Segment.GetDefaultProcedure(state); // state.Procedure.GetProcedure($"{name}_Proc", state.Segment.Address, state.Scope);
                 state.AnonCounter++;
 
-            }, new[] { "name" })
+            }, new[] { "name" }, allowVisibility: true)
             .WithParameters(".endscope", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
@@ -241,11 +284,18 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
+                // only an explicit `private` needs a name; an unnamed proc in a private scope is fine
+                var explicitPrivate = dict.TryGetValue("visibility", out var keyword) && keyword == "private";
+                var visibility = TakeVisibility(dict, state);
+
+                if (!dict.ContainsKey("name") && explicitPrivate)
+                    throw new GeneralCompilerException(source, "A private procedure needs a name.");
+
                 var name = dict.ContainsKey("name") ? dict["name"] : $"UnnamedProc_{state.AnonCounter++}";
 
-                state.Procedure = state.Procedure.GetProcedure(name, state.Segment.Address);
+                state.Procedure = state.Procedure.GetProcedure(name, state.Segment.Address, visibility, source);
 
-            }, new[] { "name" })
+            }, new[] { "name" }, allowVisibility: true)
             .WithParameters(".endproc", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
@@ -343,6 +393,7 @@ public class Compiler
 
                 var variables = state.Procedure.Variables;
                 var src = source;
+                var visibility = TakeVisibility(dict, state);
 
                 if (dict.ContainsKey("name") && dict.ContainsKey("value"))
                 {
@@ -352,7 +403,7 @@ public class Compiler
 
                     var (address, requiresReval) = eval(false);
 
-                    state.Procedure.Variables.SetValue(dict["name"], address, VariableDataType.Constant, requiresReval, evaluate: eval, position: source);
+                    state.Procedure.Variables.SetValue(dict["name"], address, VariableDataType.Constant, requiresReval, evaluate: eval, position: source, visibility: visibility);
                     return;
                 }
 
@@ -362,9 +413,32 @@ public class Compiler
 
                     var (address, requiresReval) = eval(false);
 
-                    state.Procedure.Variables.SetValue(kv.Key, address, VariableDataType.Constant, requiresReval, evaluate: eval, position: source);
+                    state.Procedure.Variables.SetValue(kv.Key, address, VariableDataType.Constant, requiresReval, evaluate: eval, position: source, visibility: visibility);
                 }
-            }, false)
+            }, false, allowVisibility: true)
+            .WithAssignment(".export", (dict, state, source) =>
+            {
+                // if we're parsing ZP segmentents only, jump out
+                if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
+                    return;
+
+                var visibility = TakeVisibility(dict, Visibility.Public);
+
+                if (!dict.TryGetValue("name", out var name) || string.IsNullOrWhiteSpace(name) || !dict.TryGetValue("value", out var target) || string.IsNullOrWhiteSpace(target))
+                    throw new GeneralCompilerException(source, "Expected '.export [public|private] name value'.");
+
+                var alias = new ExportVariable(name.Trim(), target.Trim(), state.Procedure.Variables, state.Scope.Variables, state.Evaluator, visibility, source);
+
+                // resolve now if we can, so the alias has its final value (and size) from the start
+                var (value, requiresReval) = alias.Evaluate(false);
+                if (!requiresReval)
+                {
+                    alias.Value = value;
+                    alias.RequiresReval = false;
+                }
+
+                state.Procedure.Variables.Add(alias);
+            }, false, allowVisibility: true)
             .WithAssignment(".constvar", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
@@ -449,9 +523,9 @@ public class Compiler
 
                 var (address, requiresReval) = eval(false);
 
-                state.Procedure.Variables.SetValue(name, address, variableType, requiresReval, size, isArray, evaluate: eval, position: source);
+                state.Procedure.Variables.SetValue(name, address, variableType, requiresReval, size, isArray, evaluate: eval, position: source, visibility: TakeVisibility(dict, state));
 
-            }, true)
+            }, true, allowVisibility: true)
             .WithAssignment(".var", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
@@ -524,7 +598,7 @@ public class Compiler
                 if (variableType == VariableDataType.FixedStrings)
                     isArray = false;
 
-                state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray, position: source);
+                state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray, position: source, visibility: TakeVisibility(dict, state));
 
                 // construct the data
                 var dataline = new DataBlock(state.Segment.Address, source, size, variableType, value, state.Procedure, state.Evaluator, false);
@@ -535,7 +609,7 @@ public class Compiler
                 if (_project.CompileOptions.DisplayData)
                     dataline.WriteToConsole(_logger);
 
-            }, true)
+            }, true, allowVisibility: true)
             .WithParameters(".org", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
@@ -621,7 +695,7 @@ public class Compiler
                 if (variableType == VariableDataType.FixedStrings)
                     isArray = false;
 
-                state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray, position: source);
+                state.Procedure.Variables.SetValue(name, state.Segment.Address, variableType, false, size, isArray, position: source, visibility: TakeVisibility(dict, state));
 
                 var length = variableType switch
                 {
@@ -651,7 +725,7 @@ public class Compiler
                 };
 
                 state.Segment.Address += size * length;
-            }, true)
+            }, true, allowVisibility: true)
             .WithParameters(".align", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
@@ -832,6 +906,14 @@ public class Compiler
         var globals = new Variables("App");
 
         var state = new CompileState(globals, _project.OutputFile.Filename ?? "");
+
+        // lines are evaluated more than once, so only warn once per line and name
+        var labelWarnings = new HashSet<string>();
+        globals.LabelAccessWarning = (source, message) =>
+        {
+            if (labelWarnings.Add($"{source?.Name}:{source?.LineNumber}:{message}"))
+                state.Warnings.Add(new LabelAccessWarning(source, message));
+        };
 
         await CompileFile(_project.Code.Name, state, contents);
 
@@ -1178,6 +1260,35 @@ public class Compiler
 
         state.Globals.MakeExplicit();
 
+        // Settle the variables before the lines: one can depend on another that's later in the
+        // tree (an export of an export, a constant using an export), and lines can't wait a pass.
+        while (true)
+        {
+            var resolved = 0;
+            var pending = 0;
+
+            foreach (var (_, i) in state.Globals.GetChildVariables(""))
+            {
+                if (!i.RequiresReval || i is not AsmVariable variable)
+                    continue;
+
+                var r = variable.Evaluate(true);
+
+                if (r.RequiresReval)
+                {
+                    pending++;
+                    continue;
+                }
+
+                variable.Value = r.Value;
+                variable.RequiresReval = false;
+                resolved++;
+            }
+
+            if (resolved == 0 || pending == 0)
+                break;
+        }
+
         foreach (var (_, i) in state.Globals.GetChildVariables(""))
         {
             if (!i.RequiresReval)
@@ -1189,6 +1300,9 @@ public class Compiler
 
             if (r.RequiresReval && throwOnReval)
             {
+                if (variable is ExportVariable export)
+                    throw new UnknownConstantException(export.SourceFilePosition, export.FailureMessage());
+
                 if (variable.SourceFilePosition != null)
                     throw new UnknownConstantException(variable.SourceFilePosition, $"Cannot evaluate '{variable.SourceFilePosition.Source}'.");
 
@@ -1209,14 +1323,14 @@ public class Compiler
         {
             foreach (var proc in segment.DefaultProcedure.Values)
             {
-                toReturn += RevalProc(proc, showRevaluations, throwOnReval);
+                toReturn += RevalProc(proc, state, showRevaluations, throwOnReval);
             }
         }
 
         return toReturn;
     }
 
-    private int RevalProc(Procedure proc, bool showRevaluations, bool throwOnReval)
+    private int RevalProc(Procedure proc, CompileState state, bool showRevaluations, bool throwOnReval)
     {
         var toReturn = 0;
 
@@ -1239,6 +1353,10 @@ public class Compiler
 
             if (line.RequiresReval && throwOnReval)
             {
+                var hidden = (state.Evaluator as ExpressionEvaluator)?.HiddenReasons;
+                if (hidden is { Count: > 0 })
+                    throw new UnknownSymbolException(line, $"{string.Join("; ", hidden)}.");
+
                 throw new UnknownSymbolException(line, $"Unknown name {string.Join(", ", line.RequiresRevalNames.Select(i => $"'{i}'"))}");
             }
 
@@ -1248,7 +1366,7 @@ public class Compiler
 
         foreach (var p in proc.Procedures)
         {
-            toReturn += RevalProc(p, showRevaluations, throwOnReval);
+            toReturn += RevalProc(p, state, showRevaluations, throwOnReval);
         }
 
         return toReturn;

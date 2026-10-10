@@ -20,6 +20,12 @@ namespace BitMagic.Compiler
 
         public List<string> RequiresRevalNames = new();
 
+        // names in the last expression that were found but are private, with why
+        public List<string> HiddenReasons = new();
+
+        // whether the last expression had a value that isn't known yet, so its result is only a placeholder
+        public bool LastRequiresReval { get; private set; }
+
         public ExpressionEvaluator(CompileState state)
         {
             _state = state;
@@ -44,7 +50,10 @@ namespace BitMagic.Compiler
                 if (match.Success)
                 {
                     if (!final)
+                    {
+                        LastRequiresReval = true;
                         return (0xabcd, true);  // we always reval ambigous labels
+                    }
 
                     var relative = match.Groups["relative"].Value;
                     var label = match.Groups["label"].Value;
@@ -83,6 +92,8 @@ namespace BitMagic.Compiler
             }
             _variables = variables;
             _requiresReval = false;
+            LastRequiresReval = false;
+            HiddenReasons.Clear();
             int result = 0;
             _evaluator.PreEvaluateVariable += _evaluator_PreEvaluateVariable;
             try
@@ -111,6 +122,7 @@ namespace BitMagic.Compiler
                 _evaluator.PreEvaluateVariable -= _evaluator_PreEvaluateVariable;
             }
 
+            LastRequiresReval = _requiresReval;
             return new(result, _requiresReval);
         }
 
@@ -153,6 +165,9 @@ namespace BitMagic.Compiler
             {
                 RequiresRevalNames.Add(e.Name);
                 _requiresReval |= true;
+
+                if (_variables is Variables tree && tree.HiddenReason(e.Name) is string reason)
+                    HiddenReasons.Add(reason);
 
                 // activate when we have preprocess constant collection
                 //e.Value = _size switch
