@@ -1055,10 +1055,16 @@ public class Compiler
         // eg LDA 2 rather than LDA 2.
         state.ZpParse = true;
 
+        state.LineProcedures.Clear();
+
         for (var i = 0; i < 2; i++)
         {
             foreach (var line in lines)
             {
+                // on the final pass, record the procedure the previous line left us in (for the hover)
+                if (!state.ZpParse)
+                    state.LineProcedures.Add(state.Procedure);
+
                 lineNumber++;
 
                 if (string.IsNullOrWhiteSpace(line))
@@ -1122,6 +1128,9 @@ public class Compiler
                     }
                 }
             }
+
+            if (!state.ZpParse)
+                state.LineProcedures.Add(state.Procedure);
 
             if (state.ZpParse)
             {

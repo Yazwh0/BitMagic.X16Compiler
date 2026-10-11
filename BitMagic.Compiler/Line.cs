@@ -17,6 +17,10 @@ public class Line : IOutputData
     private readonly uint _debugData;
     private readonly ICpuOpCode _opCode;
     public ICpuOpCode OpCode => _opCode;
+
+    /// <summary>The addressing mode the operand compiled to, once it has.</summary>
+    public AccessMode AccessMode { get; private set; } = AccessMode.Implied;
+
     public bool RequiresReval { get; internal set; }
     public List<string> RequiresRevalNames { get; } = new List<string>();
     public Procedure Procedure { get; }
@@ -204,6 +208,7 @@ public class Line : IOutputData
     {
         var currentLength = Data.Length;
 
+        AccessMode = accessMode;
         Data = IntToByteArray(_opCode.GetOpCode(accessMode)).Concat(operand).ToArray();
         DebugData = new uint[Data.Length];
         DebugData[0] = _debugData;

@@ -96,6 +96,13 @@ public class Variables : IVariables
         TryGetValue(name, source, out result, out _, this, Root);
 
     /// <summary>
+    /// As <see cref="TryGetValueIgnoringVisibility(string, SourceFilePosition, out IAsmVariable)"/>, also giving
+    /// the procedure or scope the name is declared in.
+    /// </summary>
+    public bool TryGetValueIgnoringVisibility(string name, SourceFilePosition source, out IAsmVariable result, out Variables owner) =>
+        TryGetValue(name, source, out result, out owner, this, Root);
+
+    /// <summary>
     /// Looks up a name as seen from <paramref name="requester"/>: names it can't see (private
     /// ones, or ones inside a private procedure) are skipped. Anything inside
     /// <paramref name="bypass"/> is visible whatever its visibility (used by `.export`).

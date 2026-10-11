@@ -28,7 +28,25 @@ public class CompileState
 
     public IExpressionEvaluator Evaluator { get; internal set; }
 
+    /// <summary>
+    /// A separate evaluator over this state's names, for evaluating outside the compile (eg the hover) without
+    /// disturbing <see cref="Evaluator"/>, which remembers what it last evaluated and isn't thread safe.
+    /// </summary>
+    public IExpressionEvaluator CreateEvaluator() => new ExpressionEvaluator(this);
+
     public List<CompilerWarning> Warnings { get; } = new List<CompilerWarning>();
+
+    // the procedure in force after each line of the code, by line number; index 0 is before the first line
+    [JsonIgnore]
+    internal List<Procedure> LineProcedures { get; } = new List<Procedure>();
+
+    /// <summary>
+    /// The procedure a line of the compiled code is in, for every line: directives, labels, blank lines and
+    /// comments as well as code. A line that opens a procedure or scope is in the new one, a line that closes
+    /// one is in the outer one. Null if the line number is past the end of the code.
+    /// </summary>
+    public Procedure ProcedureAt(int lineNumber) =>
+        lineNumber >= 0 && lineNumber < LineProcedures.Count ? LineProcedures[lineNumber] : null;
 
     private uint Id { get; set; }
 
