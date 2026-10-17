@@ -67,6 +67,102 @@ public class Compiler
             throw new GeneralCompilerException(source, $"A {what} can't be public or private, and '{name}' can't be used as a name.");
     }
 
+    // .segment defines a segment and switches to it, .segmentdefine only defines it
+    private void ProcessSegment(IDictionary<string, string> dict, CompileState state, SourceFilePosition source, bool switchTo)
+    {
+        CheckNotReserved(dict, source, "segment");
+
+        // a scope belongs to the code being written, not the segment, so it's given when switching
+        dict.TryGetValue("scope", out var scopeName);
+        if (!switchTo && !string.IsNullOrWhiteSpace(scopeName))
+            throw new GeneralCompilerException(source, $"'.segmentdefine' doesn't take a scope, give it on '.segment' when switching to '{dict["name"]}'.");
+
+        Segment segment;
+        bool newSegment;
+        if (state.Segments.ContainsKey(dict["name"]))
+        {
+            segment = state.Segments[dict["name"]];
+            newSegment = false;
+        }
+        else
+        {
+            segment = new Segment(state.Globals, dict["name"]);
+            newSegment = true;
+        }
+
+        if (dict.ContainsKey("address"))
+        {
+            var address = ParseStringToValue(dict["address"], () => new TextLine(source, false));
+
+            if (address != segment.StartAddress)
+            {
+                if (segment.ExplicitAddress)
+                    throw new GeneralCompilerException(source, $"Cannot modify segment start address when it was already explicitly set. {segment.Name} Current: 0x{segment.StartAddress:X4} Requested: 0x{address:X4}");
+
+                foreach (var proc in segment.DefaultProcedure)
+                {
+                    if (proc.Value.Data.Any())
+                        throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has data. {segment.Name} Current: 0x{segment.StartAddress:X4} Requested: 0x{address:X4}");
+
+                    if (proc.Value.Variables.Values.Any())
+                        throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has variables. {segment.Name} Current: 0x{segment.StartAddress:X4} Requested: 0x{address:X4}");
+                }
+            }
+
+            segment.Address = address;
+            segment.StartAddress = segment.Address;
+            segment.ExplicitAddress = true;
+        }
+        else
+        {
+            if (newSegment)
+            {
+                segment.Address = state.Segment.Address; // continue from the current segment
+                segment.StartAddress = segment.Address;
+            }
+        }
+
+        //if (newSegment)
+        //    Console.WriteLine($"{state.ZpParse} Creating Segment : {segment.Name} 0x{segment.StartAddress:X4}");
+
+        if (dict.ContainsKey("maxsize"))
+        {
+            segment.MaxSize = ParseStringToValue(dict["maxsize"], () => new TextLine(source, false));
+        }
+
+        if (dict.ContainsKey("filename"))
+        {
+            var filename = dict["filename"];
+
+            if (filename.StartsWith('"') && filename.EndsWith('"'))
+                filename = filename[1..^1];
+
+            segment.Filename = filename;
+        }
+        else
+        {
+            if (newSegment)
+                segment.Filename = ":" + segment.Name; // todo: find a better way to inform the writer that this segment isn't to be written.
+        }
+
+        if (newSegment)
+            state.Segments.Add(dict["name"], segment);
+
+        // .segmentdefine only defines it, the current segment stays as it is
+        if (!switchTo)
+            return;
+
+        state.Segment = segment;
+
+        // if we're parsing ZP segmentents only, jump out
+        if (segment.StartAddress > 0x100 && state.ZpParse)
+            return;
+
+        // the scope is only for this switch, the segment doesn't keep it
+        state.Scope = state.ScopeFactory.GetScope(string.IsNullOrWhiteSpace(scopeName) ? "Main" : scopeName);
+        state.Procedure = state.Segment.GetDefaultProcedure(state);
+    }
+
     private CommandParser CreateParser() => CommandParser.Parser()
             .WithLabel((label, state, source) =>
             {
@@ -121,98 +217,11 @@ public class Compiler
                 InitFromMachine(state);
 
             }, new[] { "name" })
-            .WithParameters(".segment", (dict, state, source) =>
-            {
-                CheckNotReserved(dict, source, "segment");
-                Segment segment;
-                bool newSegment;
-                if (state.Segments.ContainsKey(dict["name"]))
-                {
-                    segment = state.Segments[dict["name"]];
-                    newSegment = false;
-                }
-                else
-                {
-                    segment = new Segment(state.Globals, dict["name"]);
-                    newSegment = true;
-                }
-
-                if (dict.ContainsKey("address"))
-                {
-                    var address = ParseStringToValue(dict["address"], () => new TextLine(source, false));
-
-                    if (address != segment.StartAddress)
-                    {
-                        if (segment.ExplicitAddress)
-                            throw new GeneralCompilerException(source, $"Cannot modify segment start address when it was already explicitly set. {segment.Name} Current: 0x{segment.StartAddress:X4} Requested: 0x{address:X4}");
-
-                        foreach (var proc in segment.DefaultProcedure)
-                        {
-                            if (proc.Value.Data.Any())
-                                throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has data. {segment.Name} Current: 0x{segment.StartAddress:X4} Requested: 0x{address:X4}");
-
-                            if (proc.Value.Variables.Values.Any())
-                                throw new GeneralCompilerException(source, $"Cannot modify segment start address when it already has variables. {segment.Name} Current: 0x{segment.StartAddress:X4} Requested: 0x{address:X4}");
-                        }
-                    }
-
-                    segment.Address = address;
-                    segment.StartAddress = segment.Address;
-                    segment.ExplicitAddress = true;
-                }
-                else
-                {
-                    if (newSegment)
-                    {
-                        segment.Address = state.Segment.Address; // continue from the current segment
-                        segment.StartAddress = segment.Address;
-                    }
-                }
-
-                //if (newSegment)
-                //    Console.WriteLine($"{state.ZpParse} Creating Segment : {segment.Name} 0x{segment.StartAddress:X4}");
-
-                if (dict.ContainsKey("maxsize"))
-                {
-                    segment.MaxSize = ParseStringToValue(dict["maxsize"], () => new TextLine(source, false));
-                }
-
-                if (dict.ContainsKey("filename"))
-                {
-                    var filename = dict["filename"];
-
-                    if (filename.StartsWith('"') && filename.EndsWith('"'))
-                        filename = filename[1..^1];
-
-                    segment.Filename = filename;
-                }
-                else
-                {
-                    if (newSegment)
-                        segment.Filename = ":" + segment.Name; // todo: find a better way to inform the writer that this segment isn't to be written.
-                }
-
-                state.Segment = segment;
-
-
-                if (newSegment)
-                    state.Segments.Add(dict["name"], segment);
-
-                // if we're parsing ZP segmentents only, jump out
-                if (segment.StartAddress > 0x100 && state.ZpParse)
-                    return;
-
-                var scopeName = "Main";
-
-                if (dict.ContainsKey("scope"))
-                    scopeName = dict["scope"];
-
-                if (string.IsNullOrWhiteSpace(scopeName))
-                    scopeName = "Main";
-
-                state.Scope = state.ScopeFactory.GetScope(scopeName);
-                state.Procedure = state.Segment.GetDefaultProcedure(state);
-            }, new[] { "name", "address", "maxsize", "filename", "scope" })
+            .WithParameters(".segment", (dict, state, source) => ProcessSegment(dict, state, source, true),
+                new[] { "name", "address", "maxsize", "filename", "scope" })
+            // defines a segment without switching to it, '!segment' in the template engine becomes this
+            .WithParameters(".segmentdefine", (dict, state, source) => ProcessSegment(dict, state, source, false),
+                new[] { "name", "address", "maxsize", "filename", "scope" })
             .WithParameters(".endsegment", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
