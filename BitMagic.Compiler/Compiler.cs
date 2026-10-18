@@ -161,6 +161,7 @@ public class Compiler
         // the scope is only for this switch, the segment doesn't keep it
         state.Scope = state.ScopeFactory.GetScope(string.IsNullOrWhiteSpace(scopeName) ? "Main" : scopeName);
         state.Procedure = state.Segment.GetDefaultProcedure(state);
+        state.ScopeStack.Clear();
     }
 
     private CommandParser CreateParser() => CommandParser.Parser()
@@ -231,6 +232,7 @@ public class Compiler
                 state.Segment = state.Segments["Main"];
                 state.Scope = state.ScopeFactory.GetScope("Main");
                 state.Procedure = state.Segment.GetDefaultProcedure(state);
+                state.ScopeStack.Clear();
             })
             .WithParameters(".scope", (dict, state, source) =>
             {
@@ -251,6 +253,11 @@ public class Compiler
                     throw new GeneralCompilerException(source, $"A {Keyword(visibility)} scope needs a name.");
 
                 string name = dict.ContainsKey("name") ? dict["name"] : $"Scope_{state.AnonCounter}";
+
+                // a scope opened inside a procedure nests, so its .endscope goes back to that procedure
+                if (!state.Procedure.Anonymous)
+                    state.ScopeStack.Push((state.Scope, state.Procedure));
+
                 state.Scope = state.ScopeFactory.GetScope(name, out var isNew);
 
                 // the first time a scope is opened sets its default, after that a keyword has to agree
@@ -271,6 +278,12 @@ public class Compiler
                 // if we're parsing ZP segmentents only, jump out
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
+
+                if (state.ScopeStack.Count > 0)
+                {
+                    (state.Scope, state.Procedure) = state.ScopeStack.Pop();
+                    return;
+                }
 
                 if (!state.Procedure.Anonymous)
                 {
@@ -1181,6 +1194,7 @@ public class Compiler
             state.Segment = state.Segments["Main"];
             state.Procedure = state.Segment.GetDefaultProcedure(state);
             state.Scope = state.ScopeFactory.GetScope("Main");
+            state.ScopeStack.Clear();
 
             lineNumber = 0;
             previousLines.Clear();

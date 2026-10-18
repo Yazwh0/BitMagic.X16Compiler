@@ -36,6 +36,10 @@ public class CompileState
 
     public List<CompilerWarning> Warnings { get; } = new List<CompilerWarning>();
 
+    // the scope and procedure a .scope was opened from when it was inside a procedure, so .endscope can go back to it
+    [JsonIgnore]
+    internal Stack<(Scope Scope, Procedure Procedure)> ScopeStack { get; } = new Stack<(Scope Scope, Procedure Procedure)>();
+
     // the procedure in force after each line of the code, by line number; index 0 is before the first line
     [JsonIgnore]
     internal List<Procedure> LineProcedures { get; } = new List<Procedure>();
