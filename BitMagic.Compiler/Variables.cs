@@ -357,7 +357,7 @@ public class Variables : IVariables
 
     public void SetValue(string name, int value, VariableDataType variableType, bool requiresReval, int length = 0, bool array = false,
         Func<bool, (int Value, bool RequiresReval)> evaluate = null, SourceFilePosition position = null,
-        Visibility visibility = Visibility.Public, bool operandLabel = false)
+        Visibility visibility = Visibility.Public, bool operandLabel = false, bool hideInVariables = false)
     {
         name = name.Trim();
         CheckName(name, position);
@@ -372,7 +372,8 @@ public class Variables : IVariables
             RequiresReval = requiresReval,
             SourceFilePosition = position,
             Visibility = visibility,
-            OperandLabel = operandLabel
+            OperandLabel = operandLabel,
+            HideInVariables = hideInVariables
         };
 
         if (evaluate != null)

@@ -532,7 +532,7 @@ public class Compiler
 
                 var (address, requiresReval) = eval(false);
 
-                state.Procedure.Variables.SetValue(name, address, variableType, requiresReval, size, isArray, evaluate: eval, position: source, visibility: TakeVisibility(dict, state));
+                state.Procedure.Variables.SetValue(name, address, variableType, requiresReval, size, isArray, evaluate: eval, position: source, visibility: TakeVisibility(dict, state), hideInVariables: true);
 
             }, true, allowVisibility: true)
             .WithAssignment(".var", (dict, state, source) =>
