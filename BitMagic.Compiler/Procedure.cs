@@ -27,6 +27,10 @@ public class Procedure : IScope
     [JsonProperty]
     public bool Anonymous { get; }
 
+    // Set by `.entry`, which can only be used once per procedure.
+    [JsonIgnore]
+    public bool HasEntry { get; set; }
+
     [JsonProperty]
     public int? StartAddress => Data.FirstOrDefault()?.Address ?? null;
     public int? EndAddress {

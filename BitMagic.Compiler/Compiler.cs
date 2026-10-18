@@ -305,6 +305,27 @@ public class Compiler
                 state.Procedure = state.Procedure.GetProcedure(name, state.Segment.Address, visibility, source);
 
             }, new[] { "name" }, allowVisibility: true)
+            .WithParameters(".entry", (dict, state, source) =>
+            {
+                // if we're parsing ZP segmentents only, jump out
+                if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
+                    return;
+
+                var proc = state.Procedure;
+                if (proc.Anonymous || proc.Parent == null)
+                    throw new GeneralCompilerException(source, ".entry can only be used inside a .proc.");
+
+                if (proc.HasEntry)
+                    throw new GeneralCompilerException(source, $"Procedure '{proc.Name}' already has an .entry.");
+
+                // The proc's name is defined in its parent. Move it here, so calls land on the entry and any code
+                // above it can only be fallen into. Updated in place to keep its visibility and source position.
+                if (!proc.Parent.Variables.Values.TryGetValue(proc.Name, out var variable) || variable is not AsmVariable entry)
+                    throw new GeneralCompilerException(source, $"Cannot find the definition of procedure '{proc.Name}'.");
+
+                entry.Value = state.Segment.Address;
+                proc.HasEntry = true;
+            })
             .WithParameters(".endproc", (dict, state, source) =>
             {
                 // if we're parsing ZP segmentents only, jump out
