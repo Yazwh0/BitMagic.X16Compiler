@@ -72,6 +72,8 @@ public class Compiler
     {
         CheckNotReserved(dict, source, "segment");
 
+        var verb = switchTo ? ".segment" : ".segmentdefine";
+
         // a scope belongs to the code being written, not the segment, so it's given when switching
         dict.TryGetValue("scope", out var scopeName);
         if (!switchTo && !string.IsNullOrWhiteSpace(scopeName))
@@ -92,7 +94,7 @@ public class Compiler
 
         if (dict.ContainsKey("address"))
         {
-            var address = ParseStringToValue(dict["address"], () => new TextLine(source, false));
+            var address = NumberParameter(verb, dict, "address", source);
 
             if (address != segment.StartAddress)
             {
@@ -127,7 +129,7 @@ public class Compiler
 
         if (dict.ContainsKey("maxsize"))
         {
-            segment.MaxSize = ParseStringToValue(dict["maxsize"], () => new TextLine(source, false));
+            segment.MaxSize = NumberParameter(verb, dict, "maxsize", source);
         }
 
         if (dict.ContainsKey("filename"))
@@ -438,25 +440,17 @@ public class Compiler
                 var src = source;
                 var visibility = TakeVisibility(dict, state);
 
-                if (dict.ContainsKey("name") && dict.ContainsKey("value"))
-                {
-                    var value = dict["value"];
+                if (!dict.TryGetValue("value", out var firstValue) || string.IsNullOrWhiteSpace(firstValue))
+                    throw new GeneralCompilerException(source, $"'.const {dict["name"]}' needs a value, eg '.const {dict["name"]} = 1'.");
 
+                // several on one line, eg '.const height=25, cells=width*height'
+                foreach (var (name, value) in ConstList(dict["name"], firstValue, source))
+                {
                     var eval = (bool final) => state.Evaluator.Evaluate(value, src, variables, -1, final);
 
                     var (address, requiresReval) = eval(false);
 
-                    state.Procedure.Variables.SetValue(dict["name"], address, VariableDataType.Constant, requiresReval, evaluate: eval, position: source, visibility: visibility);
-                    return;
-                }
-
-                foreach (var kv in dict)
-                {
-                    var eval = (bool final) => state.Evaluator.Evaluate(kv.Value, src, variables, -1, final);
-
-                    var (address, requiresReval) = eval(false);
-
-                    state.Procedure.Variables.SetValue(kv.Key, address, VariableDataType.Constant, requiresReval, evaluate: eval, position: source, visibility: visibility);
+                    state.Procedure.Variables.SetValue(name, address, VariableDataType.Constant, requiresReval, evaluate: eval, position: source, visibility: visibility);
                 }
             }, false, allowVisibility: true)
             .WithAssignment(".export", (dict, state, source) =>
@@ -659,7 +653,7 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                var padto = ParseStringToValue(dict["address"], () => new TextLine(source, false));
+                var padto = NumberParameter(".org", dict, "address", source);
                 if (padto < state.Segment.Address)
                     throw new GeneralCompilerException(source, $"pad with destination of ${padto:X4}, but segment address is already ${state.Segment.Address:X4}");
 
@@ -671,7 +665,7 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                var size = ParseStringToValue(dict["size"], () => new TextLine(source, false));
+                var size = NumberParameter(".pad", dict, "size", source);
 
                 state.Segment.Address += size;
             }, new[] { "size" })
@@ -775,7 +769,7 @@ public class Compiler
                 if (state.Segment.StartAddress >= 0x100 && state.ZpParse)
                     return;
 
-                var boundry = ParseStringToValue(dict["boundary"], () => new TextLine(source, false));
+                var boundry = NumberParameter(".align", dict, "boundary", source);
 
                 if (boundry == 0)
                     return;
@@ -935,7 +929,7 @@ public class Compiler
                 if (!dict.ContainsKey("address"))
                     throw new DebugLoadArgumentsException(source, "address");
 
-                var address = ParseStringToValue(dict["address"], () => new TextLine(source, false));
+                var address = NumberParameter(".debugload", dict, "address", source);
 
                 state.DebugActionId = _debugActionManager.CreateDebugLoadAction(state.DebugActionId, dict["filename"], address);
 
@@ -1455,23 +1449,91 @@ public class Compiler
 
     private void ParseCommand(SourceFilePosition source, CompileState state) => _commandParser.Process(source, state);
 
-    private int ParseStringToValue(string inp, Func<IOutputData> getLine)
+    /// <summary>
+    /// The constants a '.const' line defines: the first name and value, then any more after a comma, eg
+    /// '.const height=25, cells=width*height'. A comma inside brackets or quotes is part of the value.
+    /// </summary>
+    private static List<(string Name, string Value)> ConstList(string firstName, string value, SourceFilePosition source)
     {
+        var parts = new List<string>();
+        var depth = 0;
+        var inQuotes = false;
+        var start = 0;
+
+        for (var i = 0; i < value.Length; i++)
+        {
+            switch (value[i])
+            {
+                case '"': inQuotes = !inQuotes; break;
+                case '(' or '[' when !inQuotes: depth++; break;
+                case ')' or ']' when !inQuotes: depth--; break;
+                case ',' when !inQuotes && depth == 0:
+                    parts.Add(value[start..i].Trim());
+                    start = i + 1;
+                    break;
+            }
+        }
+        parts.Add(value[start..].Trim());
+
+        var toReturn = new List<(string Name, string Value)> { (firstName, parts[0]) };
+
+        foreach (var part in parts.Skip(1))
+        {
+            var idx = part.IndexOfAny([' ', '\t', '=']);
+            var rest = idx == -1 ? "" : part[idx..].Trim().TrimStart('=').Trim();
+
+            if (idx <= 0 || rest.Length == 0)
+                throw new GeneralCompilerException(source, $"'{part}' in '.const' needs a name and a value, eg '{(idx <= 0 ? part : part[..idx])}=1'.");
+
+            toReturn.Add((part[..idx], rest));
+        }
+
+        return toReturn;
+    }
+
+    /// <summary>
+    /// A directive's parameter that's a number, eg '.segment' maxsize. '$' is hex and '%' binary.
+    /// </summary>
+    private int NumberParameter(string verb, IDictionary<string, string> dict, string name, SourceFilePosition source)
+    {
+        if (!dict.TryGetValue(name, out var value))
+            throw new CompilerCannotParseVerbParameters(source, $"'{verb}' needs {name}.");
+
+        if (TryParseNumber(value, out var result))
+            return result;
+
+        var message = $"'{verb}' {name} must be a number, but is '{value}'.";
+
+        // something that isn't a number at all is probably meant for a later parameter, eg a filename
+        var names = _commandParser.ParameterNames(verb);
+        var later = names.SkipWhile(i => i != name).Skip(1).ToList();
+        if (later.Count != 0 && value.Length != 0 && value[0] != '$' && value[0] != '%' && !char.IsDigit(value[0]))
+        {
+            var suggest = later.FirstOrDefault(i => !dict.ContainsKey(i)) ?? later[0];
+            message += $" Parameters go {string.Join(", ", names)}: use '_' to skip one, or give it by name, eg '{suggest}={value}'.";
+        }
+
+        throw new CompilerCannotParseVerbParameters(source, message);
+    }
+
+    private static bool TryParseNumber(string value, out int result)
+    {
+        result = 0;
+
         try
         {
-            if (inp.StartsWith('$'))
-                return Convert.ToInt32(inp[1..], 16);
+            if (value.StartsWith('$'))
+                result = Convert.ToInt32(value[1..], 16);
+            else if (value.StartsWith('%'))
+                result = Convert.ToInt32(value[1..], 2);
+            else
+                return int.TryParse(value, out result);
 
-            if (inp.StartsWith('%'))
-                return Convert.ToInt32(inp[1..], 2);
-
-            if (int.TryParse(inp, out var result))
-                return result;
+            return true;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is FormatException or OverflowException or ArgumentException)
         {
-            throw new CompilerStringParseException(getLine(), e.Message, inp);
+            return false;
         }
-        throw new CompilerStringParseException(getLine(), $"Cannot parse {inp} into an int", inp);
     }
 }

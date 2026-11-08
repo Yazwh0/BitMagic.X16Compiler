@@ -3,6 +3,7 @@ using BitMagic.Compiler.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace BitMagic.Compiler;
@@ -12,7 +13,13 @@ internal class CommandParser
     private readonly Regex _firstWord = new Regex("^\\s*(?<result>([.][\\w\\-:]+))(?<line>(.*))$", RegexOptions.Compiled);
 
     private readonly Dictionary<string, Action<SourceFilePosition, CompileState, string>> _lineProcessor = new ();
+    private readonly Dictionary<string, IList<string>> _parameterNames = new();
     private Action<string, CompileState, SourceFilePosition> _labelProcessor;
+
+    /// <summary>
+    /// A verb's parameters in order, eg 'name, address, maxsize, filename, scope' for '.segment'. Empty if it has none.
+    /// </summary>
+    public IList<string> ParameterNames(string verb) => _parameterNames.TryGetValue(verb, out var names) ? names : [];
 
     private CommandParser()
     {
@@ -26,10 +33,11 @@ internal class CommandParser
     /// <param name="allowVisibility">The verb takes `public` or `private` as its first word, passed on as dict["visibility"].</param>
     public CommandParser WithParameters(string verb, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string> defaultNames = null, bool allowVisibility = false)
     {
+        _parameterNames[verb] = defaultNames ?? [];
         _lineProcessor.Add(verb, (p, s, r) =>
         {
             var withVisibility = WithVisibility(action, r, allowVisibility, out var rest);
-            ProcesParameters(rest, p, s, withVisibility, defaultNames);
+            ProcesParameters(verb, rest, p, s, withVisibility, defaultNames ?? []);
         });
         return this;
     }
@@ -121,6 +129,7 @@ internal class CommandParser
     /// name type [=] value
     /// .const foo $100
     /// .const foo = $100
+    /// .const foo=$100
     /// .const byte foo $100
     /// .const byte foo = CODE + 10
     /// .const byte foo CODE + 10
@@ -162,6 +171,9 @@ internal class CommandParser
             paramDict.Add("type", toAdd);
         }
 
+        // the name ends at a space or an '=', so 'foo=$100' is the same as 'foo = $100'
+        idx = rawParams.IndexOfAny([' ', '\t', '=']);
+
         if (idx == -1)
         {
             paramDict.Add("name", rawParams.Trim());
@@ -188,83 +200,164 @@ internal class CommandParser
     /// .segment main $100 $200 filename=main.bin
     /// .segment main, $100, $200, filename = main.bin
     /// .segment main $100 _ main.bin
+    /// .segment main $100 _ "main file.bin"
+    /// Values are in the verb's order, '_' skips one, and 'name=value' (or 'name:value') gives one by name.
     /// </summary>
-    /// <param name="rawParams"></param>
-    /// <param name="source"></param>
-    /// <param name="state"></param>
-    /// <param name="action"></param>
-    /// <param name="defaultNames"></param>
     /// <exception cref="CompilerCannotParseVerbParameters"></exception>
-    private static void ProcesParameters(string rawParams, SourceFilePosition source, CompileState state, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string> defaultNames)
+    private static void ProcesParameters(string verb, string rawParams, SourceFilePosition source, CompileState state, Action<IDictionary<string, string>, CompileState, SourceFilePosition> action, IList<string> names)
     {
         var parameters = new Dictionary<string, string>();
+        var position = 0;
 
-        if (string.IsNullOrEmpty(rawParams))
+        foreach (var token in Tokenise(rawParams ?? ""))
         {
-            action(parameters, state, source);
-            return;
-        }
-
-        var defaultPos = 0;
-
-        //var seperator = rawParams.Contains(',') ? ',' : ' ';
-
-        var thisArgs =
-            rawParams.Split('"')
-                     .Select((element, index) => index % 2 == 0  // If even index
-                                       ? element.Split([',', ' '], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)  // Split the item
-                                       : new string[] { element })  // Keep the entire item
-                     .SelectMany(element => element).ToArray();
-
-        for (var argsPos = 0; argsPos < thisArgs.Length; argsPos++)
-        {
-            if (string.IsNullOrWhiteSpace(thisArgs[argsPos]))
-                continue;
-
-            if (thisArgs[argsPos].StartsWith(';'))
-                break;
-
-            if (thisArgs[argsPos].StartsWith("//"))
-                break;
-
-            if (thisArgs[argsPos].EndsWith(','))
-                thisArgs[argsPos] = thisArgs[argsPos][..^1].Trim();
-
-            if (thisArgs[argsPos] == "_")
+            if (token == "_")
             {
-                defaultPos++;
+                position++;
                 continue;
             }
 
-            var idx = thisArgs[argsPos].IndexOf(':');
+            var (name, value) = SplitNamed(verb, token, names, source);
 
-            if (idx == -1)
-                idx = thisArgs[argsPos].IndexOf('=');
-
-            if (idx == -1 || defaultNames == null) // if there are no default names, then we just set as there cant be named parameter
+            if (name == null)
             {
-                if (defaultNames == null || defaultPos >= defaultNames.Count)
-                    throw new CompilerCannotParseVerbParameters(source, $"Unknown parameter {thisArgs[argsPos]} at {source}");
+                // an empty "" isn't a value, as before
+                if (value.Length == 0)
+                    continue;
 
-                parameters.Add(defaultNames[defaultPos++], thisArgs[argsPos]);
-                continue;
+                if (names.Count == 0)
+                    throw new CompilerCannotParseVerbParameters(source, $"'{verb}' doesn't take any parameters, but has '{token}'.");
+
+                if (position >= names.Count)
+                    throw new CompilerCannotParseVerbParameters(source, $"'{verb}' takes {string.Join(", ", names)}, so '{token}' is one too many.");
+
+                name = names[position++];
+
+                if (parameters.ContainsKey(name))
+                    throw new CompilerCannotParseVerbParameters(source, $"'{verb}' has '{name}' twice: '{token}' is in its place, but it's already given by name.");
+            }
+            else if (parameters.ContainsKey(name))
+            {
+                throw new CompilerCannotParseVerbParameters(source, $"'{verb}' has '{name}' twice.");
             }
 
-            var name = thisArgs[argsPos][..idx].Trim();
-
-            if (defaultNames.Contains(name))
-            {
-                var value = thisArgs[argsPos][(idx + 1)..].Trim();
-
-                parameters.Add(name, value);
-
-                continue;
-            }
-
-            parameters.Add(defaultNames[defaultPos++], thisArgs[argsPos]);
+            parameters[name] = value;
         }
 
         action(parameters, state, source);
+    }
+
+    private static readonly Regex _word = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
+
+    /// <summary>
+    /// A token as a named parameter, or (null, value) if it's positional. Quotes are taken off the value.
+    /// </summary>
+    private static (string Name, string Value) SplitNamed(string verb, string token, IList<string> names, SourceFilePosition source)
+    {
+        // a quoted value is never named, eg "C:\x.bin"
+        if (token.StartsWith('"'))
+            return (null, Unquote(token));
+
+        var idx = token.IndexOfAny(['=', ':']);
+
+        if (idx > 0)
+        {
+            var name = token[..idx];
+
+            if (names.Contains(name))
+                return (name, Unquote(token[(idx + 1)..]));
+
+            // ':' isn't checked, as it's in values such as 'C:\x.bin' that '.map' is given
+            if (token[idx] == '=' && _word.IsMatch(name))
+                throw new CompilerCannotParseVerbParameters(source, names.Count == 0 ?
+                    $"'{verb}' doesn't take any parameters, but has '{name}'." :
+                    $"'{verb}' has no parameter '{name}'. It takes {string.Join(", ", names)}.");
+        }
+
+        return (null, Unquote(token));
+    }
+
+    private static string Unquote(string value) =>
+        value.Length >= 2 && value.StartsWith('"') && value.EndsWith('"') ? value[1..^1] : value;
+
+    /// <summary>
+    /// Splits parameters on spaces and commas, up to a ';' or '//' comment. A quoted value is kept whole, with its
+    /// quotes, and 'name = value' is joined into 'name=value'.
+    /// </summary>
+    private static List<string> Tokenise(string rawParams)
+    {
+        var tokens = new List<string>();
+        var current = new StringBuilder();
+        var inQuotes = false;
+
+        void Flush()
+        {
+            if (current.Length != 0)
+                tokens.Add(current.ToString());
+
+            current.Clear();
+        }
+
+        for (var i = 0; i < rawParams.Length; i++)
+        {
+            var c = rawParams[i];
+
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+                current.Append(c);
+                continue;
+            }
+
+            if (!inQuotes)
+            {
+                if (c == ';')
+                    break;
+
+                // only at the start of a value, so a path such as 'http://' isn't cut short
+                if (c == '/' && current.Length == 0 && i + 1 < rawParams.Length && rawParams[i + 1] == '/')
+                    break;
+
+                if (c == ',' || char.IsWhiteSpace(c))
+                {
+                    Flush();
+                    continue;
+                }
+            }
+
+            current.Append(c);
+        }
+
+        Flush();
+
+        // 'name = value', 'name= value' and 'name =value'
+        var joined = new List<string>();
+        for (var i = 0; i < tokens.Count; i++)
+        {
+            var token = tokens[i];
+
+            if (_word.IsMatch(token) && i + 2 < tokens.Count && tokens[i + 1] == "=")
+            {
+                joined.Add($"{token}={tokens[i + 2]}");
+                i += 2;
+            }
+            else if (token.EndsWith('=') && _word.IsMatch(token[..^1]) && i + 1 < tokens.Count)
+            {
+                joined.Add(token + tokens[i + 1]);
+                i++;
+            }
+            else if (_word.IsMatch(token) && i + 1 < tokens.Count && tokens[i + 1].Length > 1 && tokens[i + 1].StartsWith('='))
+            {
+                joined.Add(token + tokens[i + 1]);
+                i++;
+            }
+            else
+            {
+                joined.Add(token);
+            }
+        }
+
+        return joined;
     }
 
     private static void ProcessLine(SourceFilePosition source, CompileState state, Action<SourceFilePosition, CompileState> action) => action(source, state);
