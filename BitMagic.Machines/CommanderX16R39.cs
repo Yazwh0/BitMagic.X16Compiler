@@ -97,6 +97,19 @@ namespace BitMagic.Machines
             {"FX_CACHE_H", 0x9f2b },
             {"FX_CACHE_U", 0x9f2c },
 
+            {"FX_TILEBASE", 0x9f2a },       // DCSEL 2
+            {"FX_MAPBASE", 0x9f2b },        // DCSEL 2
+            {"FX_Y_INCR_L", 0x9f2b },       // DCSEL 3
+            {"FX_Y_INCR_H", 0x9f2c },       // DCSEL 3
+            {"FX_X_POS_L", 0x9f29 },        // DCSEL 4
+            {"FX_X_POS_H", 0x9f2a },        // DCSEL 4
+            {"FX_Y_POS_L", 0x9f2b },        // DCSEL 4
+            {"FX_Y_POS_H", 0x9f2c },        // DCSEL 4
+            {"FX_X_POS_S", 0x9f29 },        // DCSEL 5, X's sub pixel
+            {"FX_Y_POS_S", 0x9f2a },        // DCSEL 5, Y's sub pixel
+            {"FX_POLY_FILL_L", 0x9f2b },    // DCSEL 5, read only
+            {"FX_POLY_FILL_H", 0x9f2c },    // DCSEL 5, read only
+
 
             // Constants
             {"DC_SEL_0", 0x00 << 1 },
@@ -112,9 +125,9 @@ namespace BitMagic.Machines
             {"FX_4BIT", 0b100 },
 
             {"FX_2BYTE_INCR", 0x01 },
-            {"FX_CACHE_INDEX_MASK", 0xb1100 },
+            {"FX_CACHE_INDEX_MASK", 0b1100 },
             {"FX_CACHE_INDEX_SHIFT", 2 },
-            {"FX_CACHE_NIBBLE_INDEX", 0xb10 },
+            {"FX_CACHE_NIBBLE_INDEX", 0b10 },
 
 
             // From the kernel https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2004%20-%20KERNAL.md
